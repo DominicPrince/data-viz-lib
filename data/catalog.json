@@ -1,0 +1,287 @@
+[
+  {
+    "id": "bar-chart",
+    "name": "Bar Chart",
+    "description": "Compares discrete categories using the length of rectangular bars. One of the most versatile and universally understood chart types.",
+    "aliases": ["bar graph", "column chart", "horizontal bar", "vertical bar"],
+    "keywords": ["bars", "rectangles", "columns", "compare", "ranking", "categorical", "discrete"],
+    "tags": ["comparison", "ranking", "categorical"],
+    "use_cases": [
+      "Comparing values across categories (sales by region, votes by party)",
+      "Showing rankings or league tables",
+      "Tracking a single metric across time periods"
+    ],
+    "not_use_cases": [
+      "Showing continuous trends over time (use a line chart)",
+      "Displaying part-to-whole relationships (use a pie or stacked bar)",
+      "More than ~20 categories — it becomes unreadable"
+    ],
+    "also_see": ["grouped-bar-chart", "stacked-bar-chart", "lollipop-chart"]
+  },
+  {
+    "id": "line-chart",
+    "name": "Line Chart",
+    "description": "Connects data points with a continuous line to show how a value changes over time or across a continuous variable.",
+    "aliases": ["line graph", "time series chart", "trend chart", "fever chart"],
+    "keywords": ["line", "trend", "time", "continuous", "over time", "temporal", "progression", "change"],
+    "tags": ["temporal", "trend", "continuous"],
+    "use_cases": [
+      "Showing how a value changes over time (stock price, temperature, revenue)",
+      "Comparing trends across multiple series",
+      "Highlighting a rate of change or inflection point"
+    ],
+    "not_use_cases": [
+      "Comparing discrete, unrelated categories (use a bar chart)",
+      "Data with fewer than 3 points — a line implies continuous change",
+      "Showing part-to-whole composition"
+    ],
+    "also_see": ["area-chart", "bar-chart", "scatter-plot"]
+  },
+  {
+    "id": "scatter-plot",
+    "name": "Scatter Plot",
+    "description": "Plots individual data points on two axes to reveal correlations, clusters, and outliers between two continuous variables.",
+    "aliases": ["scatter chart", "scatter diagram", "dot plot", "XY chart", "correlation chart"],
+    "keywords": ["dots", "points", "correlation", "relationship", "two variables", "outliers", "clusters", "spread"],
+    "tags": ["relationship", "correlation", "distribution"],
+    "use_cases": [
+      "Exploring the relationship between two numeric variables",
+      "Identifying clusters or outliers in a dataset",
+      "Showing the spread of a population"
+    ],
+    "not_use_cases": [
+      "Categorical data — both axes should be continuous",
+      "Very small datasets where patterns can't emerge",
+      "Communicating to general audiences without guidance"
+    ],
+    "also_see": ["bubble-chart", "line-chart", "heatmap"]
+  },
+  {
+    "id": "bubble-chart",
+    "name": "Bubble Chart",
+    "description": "A scatter plot where a third variable is encoded as the area of each circle, allowing three dimensions of data to be shown at once.",
+    "aliases": ["bubble plot", "circle chart", "sized scatter", "balloon chart"],
+    "keywords": ["bubbles", "circles", "big circles", "sized circles", "three variables", "area", "size", "balls", "spheres"],
+    "tags": ["relationship", "comparison", "multi-variable"],
+    "use_cases": [
+      "Comparing entities across three variables simultaneously (e.g. country GDP, population, life expectancy)",
+      "Showing relative size alongside position",
+      "Making data feel more engaging and visual"
+    ],
+    "not_use_cases": [
+      "Precise value comparison — humans are poor at judging circle area",
+      "More than ~50 data points — overlapping becomes unreadable",
+      "When the third variable isn't meaningful (use scatter instead)"
+    ],
+    "also_see": ["scatter-plot", "treemap", "proportional-symbol-map"]
+  },
+  {
+    "id": "pie-chart",
+    "name": "Pie Chart",
+    "description": "A circular chart divided into slices to show how a whole is broken into parts. Best when there are few, clearly differentiated slices.",
+    "aliases": ["pie graph", "circle chart", "wedge chart", "donut chart"],
+    "keywords": ["pie", "slices", "circle", "wedges", "part of whole", "proportion", "percentage", "share"],
+    "tags": ["part-to-whole", "proportion", "categorical"],
+    "use_cases": [
+      "Showing how a total is divided into a small number of parts (2–5)",
+      "Communicating a dominant share (e.g. one category > 50%)",
+      "Simple, audience-friendly breakdowns"
+    ],
+    "not_use_cases": [
+      "More than 5–6 slices — comparison becomes impossible",
+      "Values that are close to each other in size",
+      "When the exact percentages matter more than the visual impression"
+    ],
+    "also_see": ["donut-chart", "treemap", "stacked-bar-chart", "waffle-chart"]
+  },
+  {
+    "id": "area-chart",
+    "name": "Area Chart",
+    "description": "A line chart where the area beneath the line is filled, emphasising the volume or magnitude of change over time.",
+    "aliases": ["area graph", "filled line chart", "mountain chart"],
+    "keywords": ["area", "filled", "shaded", "volume", "cumulative", "trend", "time", "magnitude"],
+    "tags": ["temporal", "trend", "volume"],
+    "use_cases": [
+      "Showing cumulative totals over time",
+      "Emphasising the scale of change, not just the direction",
+      "Stacked area charts for part-to-whole over time"
+    ],
+    "not_use_cases": [
+      "Multiple overlapping series — filled areas obscure each other",
+      "When the baseline isn't zero — can be visually misleading",
+      "Communicating precise values (use a line chart)"
+    ],
+    "also_see": ["line-chart", "stacked-bar-chart"]
+  },
+  {
+    "id": "heatmap",
+    "name": "Heatmap",
+    "description": "Uses colour intensity on a grid to encode a numeric value, making it easy to spot patterns across two categorical dimensions.",
+    "aliases": ["heat map", "colour matrix", "grid heatmap", "calendar heatmap", "density map"],
+    "keywords": ["colour", "color", "grid", "matrix", "intensity", "pattern", "density", "calendar", "hot", "cold"],
+    "tags": ["relationship", "pattern", "matrix", "categorical"],
+    "use_cases": [
+      "Showing activity patterns over time (GitHub contribution graph, weekly traffic by hour)",
+      "Comparing two categorical dimensions on a third numeric value",
+      "Identifying anomalies or clusters in a large dataset"
+    ],
+    "not_use_cases": [
+      "Audiences who are colour-blind without careful palette choice",
+      "When precise values are needed (colour is imprecise)",
+      "Data with many unique values in the grid — cells become tiny"
+    ],
+    "also_see": ["scatter-plot", "treemap"]
+  },
+  {
+    "id": "treemap",
+    "name": "Treemap",
+    "description": "Uses nested rectangles to represent hierarchical data, where the area of each rectangle encodes a numeric value.",
+    "aliases": ["tree map", "rectangle chart", "nested squares", "proportional squares", "square chart"],
+    "keywords": ["rectangles", "squares", "nested", "hierarchy", "proportional", "area", "part of whole", "tiles"],
+    "tags": ["part-to-whole", "hierarchy", "proportion"],
+    "use_cases": [
+      "Showing the relative size of many parts within a whole (market share, file sizes, budget breakdown)",
+      "Displaying hierarchical data (categories and subcategories)",
+      "When you have too many parts for a pie chart"
+    ],
+    "not_use_cases": [
+      "Showing change over time",
+      "When precise comparison is needed — area is hard to judge",
+      "Deeply nested hierarchies with many levels"
+    ],
+    "also_see": ["pie-chart", "sunburst-chart", "bubble-chart"]
+  },
+  {
+    "id": "histogram",
+    "name": "Histogram",
+    "description": "Shows the distribution of a single continuous variable by grouping values into bins and displaying the frequency of each bin as a bar.",
+    "aliases": ["frequency histogram", "distribution chart", "binned bar chart", "frequency distribution"],
+    "keywords": ["distribution", "frequency", "bins", "spread", "skew", "normal", "histogram", "bell curve", "range"],
+    "tags": ["distribution", "statistical"],
+    "use_cases": [
+      "Showing how values are distributed across a range (age distribution, response times, test scores)",
+      "Identifying skew, outliers, or bimodal distributions",
+      "Comparing distributions across groups"
+    ],
+    "not_use_cases": [
+      "Categorical data (use a bar chart)",
+      "Very small datasets where bins are nearly empty",
+      "When exact values matter more than the overall shape"
+    ],
+    "also_see": ["box-plot", "violin-plot", "scatter-plot"]
+  },
+  {
+    "id": "box-plot",
+    "name": "Box Plot",
+    "description": "Summarises a distribution using five statistics — minimum, Q1, median, Q3, maximum — making it easy to compare spread and skew across groups.",
+    "aliases": ["box-and-whisker plot", "box whisker", "boxplot", "quartile chart"],
+    "keywords": ["median", "quartile", "whisker", "spread", "distribution", "outlier", "IQR", "range", "statistical summary"],
+    "tags": ["distribution", "comparison", "statistical"],
+    "use_cases": [
+      "Comparing distributions across multiple groups or categories",
+      "Highlighting outliers in the data",
+      "Summarising large datasets compactly"
+    ],
+    "not_use_cases": [
+      "General audiences unfamiliar with statistics",
+      "Small datasets where a dot plot would show actual values",
+      "When the shape of the distribution matters (use a violin or histogram)"
+    ],
+    "also_see": ["violin-plot", "histogram", "scatter-plot"]
+  },
+  {
+    "id": "sankey-diagram",
+    "name": "Sankey Diagram",
+    "description": "Shows flows between nodes, where the width of each flow is proportional to the quantity it represents. Great for visualising how a total is distributed through stages.",
+    "aliases": ["sankey chart", "flow chart", "flow diagram", "alluvial diagram", "stream chart"],
+    "keywords": ["flow", "streams", "paths", "journey", "allocation", "throughput", "energy", "budget flow", "nodes", "links"],
+    "tags": ["flow", "relationship", "process"],
+    "use_cases": [
+      "Showing how a budget or energy is allocated across departments or uses",
+      "Visualising user journeys or conversion funnels",
+      "Tracking the flow of materials, money, or people through a system"
+    ],
+    "not_use_cases": [
+      "Cyclic flows — Sankeys are directional",
+      "Simple comparisons that a bar chart would handle more clearly",
+      "Very large numbers of nodes — becomes visually overwhelming"
+    ],
+    "also_see": ["chord-diagram", "funnel-chart"]
+  },
+  {
+    "id": "chord-diagram",
+    "name": "Chord Diagram",
+    "description": "Shows relationships and flows between entities arranged around a circle, with arcs connecting them proportionally to the flow volume.",
+    "aliases": ["chord chart", "arc diagram", "circular flow diagram", "relationship circle"],
+    "keywords": ["arcs", "circle", "connections", "relationships", "bilateral", "matrix", "flows between", "chord"],
+    "tags": ["relationship", "flow", "network"],
+    "use_cases": [
+      "Showing bilateral flows between a fixed set of entities (trade between countries, migrations)",
+      "Visualising a relationship matrix in a compelling way",
+      "When the symmetry and proportionality of relationships matter"
+    ],
+    "not_use_cases": [
+      "More than ~10 entities — becomes very cluttered",
+      "One-directional flows (use a Sankey diagram)",
+      "General audiences — requires explanation"
+    ],
+    "also_see": ["sankey-diagram", "network-graph"]
+  },
+  {
+    "id": "funnel-chart",
+    "name": "Funnel Chart",
+    "description": "Shows progressive reduction of a value through sequential stages, commonly used for conversion analysis.",
+    "aliases": ["funnel graph", "conversion funnel", "pipeline chart", "sales funnel"],
+    "keywords": ["funnel", "conversion", "stages", "drop-off", "pipeline", "sales", "sequential", "steps", "attrition"],
+    "tags": ["flow", "process", "comparison"],
+    "use_cases": [
+      "Tracking conversion rates through a sales or marketing pipeline",
+      "Showing drop-off at each stage of a user journey",
+      "Highlighting where the biggest losses occur in a process"
+    ],
+    "not_use_cases": [
+      "Data without a clear sequential order",
+      "When stages are not subsets of the previous stage",
+      "Showing multiple parallel funnels (gets very busy)"
+    ],
+    "also_see": ["sankey-diagram", "bar-chart"]
+  },
+  {
+    "id": "radar-chart",
+    "name": "Radar Chart",
+    "description": "Plots multiple variables on axes radiating from a central point, with the enclosed area showing the overall profile of an entity.",
+    "aliases": ["spider chart", "spider graph", "web chart", "star chart", "polar chart", "radar graph"],
+    "keywords": ["spider", "web", "radial", "axes", "polygon", "profile", "multi-dimensional", "radar", "spiderweb"],
+    "tags": ["comparison", "multi-variable", "profile"],
+    "use_cases": [
+      "Comparing an entity's performance across multiple dimensions (e.g. a product's attributes)",
+      "Showing strength and weakness profiles",
+      "Overlaying two or three entities to compare overall shapes"
+    ],
+    "not_use_cases": [
+      "More than 3 entities — overlapping polygons become unreadable",
+      "When precise values matter (radial scales are hard to read)",
+      "Data where some axes have very different scales or directions"
+    ],
+    "also_see": ["bar-chart", "parallel-coordinates"]
+  },
+  {
+    "id": "waffle-chart",
+    "name": "Waffle Chart",
+    "description": "A grid of equal-sized cells where filled cells represent a proportion of the whole — a more readable alternative to a pie chart.",
+    "aliases": ["square pie", "waffle graph", "unit chart", "icon array"],
+    "keywords": ["grid", "squares", "waffle", "proportion", "percentage", "part of whole", "cells", "unit", "100 squares"],
+    "tags": ["part-to-whole", "proportion"],
+    "use_cases": [
+      "Communicating a percentage to a general audience in an intuitive way",
+      "Showing a single key statistic (e.g. 1 in 3 people...)",
+      "Making a data story more visual and engaging"
+    ],
+    "not_use_cases": [
+      "More than 3–4 categories",
+      "Values that don't round to a clean percentage",
+      "When you need spatial precision"
+    ],
+    "also_see": ["pie-chart", "treemap"]
+  }
+]
