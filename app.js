@@ -1167,7 +1167,7 @@ const CHART_RECOMMENDATIONS = {
 /* ── Load catalog ────────────────────────────────────────────────────────── */
 async function loadCatalog() {
   showSkeletons();
-  const res = await fetch('data/catalog.json?v=37');
+  const res = await fetch('data/catalog.json?v=38');
   state.catalog = await res.json();
 
   state.fuse = new Fuse(state.catalog, {
@@ -2134,15 +2134,1273 @@ function renderTableChartSVG(theme) {
   return svg;
 }
 
+/* ── Batch 1 renderers ───────────────────────────────────────────────────── */
+
+function renderHistogramSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 16, right: 16, bottom: 36, left: 44 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, baseColor, font, c0, barRadius: r, gridDash, axisLabels } = chartTokens(theme);
+  const bins = [1,3,7,14,23,33,40,36,27,17,9,4,1];
+  const max = 40; const bW = cW / bins.length;
+  const yV = v => pad.top + cH - (v / max) * cH;
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const grid = [0,10,20,30,40].map(t => {
+    const y = yV(t).toFixed(1);
+    return `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="${t===0?baseColor:gridColor}" stroke-width="1"${dash}/>` +
+      (axisLabels ? `<text x="${pad.left-6}" y="${(+y+4).toFixed(1)}" text-anchor="end" font-size="10" font-family="${font}" fill="${textColor}">${t}</text>` : '');
+  }).join('');
+  const bars = bins.map((v,i) => {
+    const x = pad.left + i*bW, h = (v/max)*cH, y = yV(v);
+    return r===0||h<=r
+      ? `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(bW+0.5).toFixed(1)}" height="${h.toFixed(1)}" fill="${c0}"/>`
+      : `<path d="M${x.toFixed(1)},${(y+h).toFixed(1)} L${x.toFixed(1)},${(y+r).toFixed(1)} Q${x.toFixed(1)},${y.toFixed(1)} ${(x+r).toFixed(1)},${y.toFixed(1)} L${(x+bW-r).toFixed(1)},${y.toFixed(1)} Q${(x+bW).toFixed(1)},${y.toFixed(1)} ${(x+bW).toFixed(1)},${(y+r).toFixed(1)} L${(x+bW).toFixed(1)},${(y+h).toFixed(1)} Z" fill="${c0}"/>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${grid}${bars}</svg>`;
+}
+
+function renderStackedBarChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 16, right: 16, bottom: 36, left: 44 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, baseColor, font, c0, barRadius: r, gridDash, axisLabels } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0, c2 = theme.palette[2]||c1;
+  const data = [{l:'Q1',a:40,b:30,c:20},{l:'Q2',a:55,b:25,c:30},{l:'Q3',a:35,b:40,c:25},{l:'Q4',a:60,b:35,c:20},{l:'Q5',a:45,b:20,c:35}];
+  const max = 120; const { ticks } = niceScale(max, 4);
+  const slot = cW/data.length, bW = Math.round(slot*0.55);
+  const yV = v => pad.top + cH - (v/max)*cH;
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const grid = ticks.map(t => {
+    const y = yV(t).toFixed(1);
+    return `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="${t===0?baseColor:gridColor}" stroke-width="1"${dash}/>` +
+      (axisLabels ? `<text x="${pad.left-6}" y="${(+y+4).toFixed(1)}" text-anchor="end" font-size="10" font-family="${font}" fill="${textColor}">${t}</text>` : '');
+  }).join('');
+  const bars = data.map((d,i) => {
+    const x = pad.left + slot*i + (slot-bW)/2;
+    const hC=(d.c/max)*cH, hB=(d.b/max)*cH, hA=(d.a/max)*cH;
+    const yC=pad.top+cH-hC, yB=yC-hB, yA=yB-hA;
+    const topPath = r===0||hA<=r
+      ? `<rect x="${x.toFixed(1)}" y="${yA.toFixed(1)}" width="${bW}" height="${hA.toFixed(1)}" fill="${c0}"/>`
+      : `<path d="M${x.toFixed(1)},${(yA+hA).toFixed(1)} L${x.toFixed(1)},${(yA+r).toFixed(1)} Q${x.toFixed(1)},${yA.toFixed(1)} ${(x+r).toFixed(1)},${yA.toFixed(1)} L${(x+bW-r).toFixed(1)},${yA.toFixed(1)} Q${(x+bW).toFixed(1)},${yA.toFixed(1)} ${(x+bW).toFixed(1)},${(yA+r).toFixed(1)} L${(x+bW).toFixed(1)},${(yA+hA).toFixed(1)} Z" fill="${c0}"/>`;
+    const lbl = axisLabels ? `<text x="${(x+bW/2).toFixed(1)}" y="${(pad.top+cH+16).toFixed(1)}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${d.l}</text>` : '';
+    return `<rect x="${x.toFixed(1)}" y="${yC.toFixed(1)}" width="${bW}" height="${hC.toFixed(1)}" fill="${c2}"/>` +
+           `<rect x="${x.toFixed(1)}" y="${yB.toFixed(1)}" width="${bW}" height="${hB.toFixed(1)}" fill="${c1}"/>` +
+           topPath + lbl;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${grid}${bars}</svg>`;
+}
+
+function renderStackedBar100SVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 16, right: 16, bottom: 36, left: 44 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, font, c0, barRadius: r, gridDash, axisLabels } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0, c2 = theme.palette[2]||c1;
+  const data = [{l:'A',a:.45,b:.35,c:.20},{l:'B',a:.30,b:.45,c:.25},{l:'C',a:.55,b:.25,c:.20},{l:'D',a:.40,b:.30,c:.30},{l:'E',a:.50,b:.20,c:.30}];
+  const slot = cW/data.length, bW = Math.round(slot*0.55);
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const grid = [0,25,50,75,100].map(t => {
+    const y = (pad.top+cH-(t/100)*cH).toFixed(1);
+    return `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="${gridColor}" stroke-width="1"${dash}/>` +
+      (axisLabels ? `<text x="${pad.left-6}" y="${(+y+4).toFixed(1)}" text-anchor="end" font-size="10" font-family="${font}" fill="${textColor}">${t}%</text>` : '');
+  }).join('');
+  const bars = data.map((d,i) => {
+    const x = pad.left + slot*i + (slot-bW)/2;
+    const hA=d.a*cH, hB=d.b*cH, hC=d.c*cH;
+    const yC=pad.top+cH-hC, yB=yC-hB, yA=yB-hA;
+    const topPath = r===0||hA<=r
+      ? `<rect x="${x.toFixed(1)}" y="${yA.toFixed(1)}" width="${bW}" height="${hA.toFixed(1)}" fill="${c0}"/>`
+      : `<path d="M${x.toFixed(1)},${(yA+hA).toFixed(1)} L${x.toFixed(1)},${(yA+r).toFixed(1)} Q${x.toFixed(1)},${yA.toFixed(1)} ${(x+r).toFixed(1)},${yA.toFixed(1)} L${(x+bW-r).toFixed(1)},${yA.toFixed(1)} Q${(x+bW).toFixed(1)},${yA.toFixed(1)} ${(x+bW).toFixed(1)},${(yA+r).toFixed(1)} L${(x+bW).toFixed(1)},${(yA+hA).toFixed(1)} Z" fill="${c0}"/>`;
+    const lbl = axisLabels ? `<text x="${(x+bW/2).toFixed(1)}" y="${(pad.top+cH+16).toFixed(1)}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${d.l}</text>` : '';
+    return `<rect x="${x.toFixed(1)}" y="${yC.toFixed(1)}" width="${bW}" height="${hC.toFixed(1)}" fill="${c2}"/>` +
+           `<rect x="${x.toFixed(1)}" y="${yB.toFixed(1)}" width="${bW}" height="${hB.toFixed(1)}" fill="${c1}"/>` +
+           topPath + lbl;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${grid}${bars}</svg>`;
+}
+
+function renderWaterfallChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 20, right: 16, bottom: 36, left: 50 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, baseColor, font, c0, barRadius: r, gridDash, axisLabels } = chartTokens(theme);
+  const cNeg = theme.palette[2] || theme.palette[1] || c0;
+  const steps = [{l:'Start',v:60,base:0,pos:true},{l:'Sales',v:35,base:60,pos:true},{l:'Costs',v:-25,base:95,pos:false},{l:'Tax',v:-15,base:70,pos:false},{l:'Other',v:20,base:55,pos:true},{l:'Total',v:75,base:0,pos:true,total:true}];
+  const max = 100;
+  const slot = cW/steps.length, bW = Math.round(slot*0.5);
+  const yV = v => pad.top + cH - (v/max)*cH;
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const grid = [0,25,50,75,100].map(t => {
+    const y = yV(t).toFixed(1);
+    return `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="${t===0?baseColor:gridColor}" stroke-width="1"${dash}/>` +
+      (axisLabels ? `<text x="${pad.left-6}" y="${(+y+4).toFixed(1)}" text-anchor="end" font-size="10" font-family="${font}" fill="${textColor}">${t}</text>` : '');
+  }).join('');
+  const bars = steps.map((s,i) => {
+    const x = pad.left + slot*i + (slot-bW)/2;
+    const absV = Math.abs(s.v);
+    const yTop = s.pos ? yV(s.base + absV) : yV(s.base);
+    const h = (absV/max)*cH;
+    const color = s.total ? c0 : (s.pos ? c0 : cNeg);
+    const bar = r===0||h<=r
+      ? `<rect x="${x.toFixed(1)}" y="${yTop.toFixed(1)}" width="${bW}" height="${h.toFixed(1)}" fill="${color}"/>`
+      : `<path d="M${x.toFixed(1)},${(yTop+h).toFixed(1)} L${x.toFixed(1)},${(yTop+r).toFixed(1)} Q${x.toFixed(1)},${yTop.toFixed(1)} ${(x+r).toFixed(1)},${yTop.toFixed(1)} L${(x+bW-r).toFixed(1)},${yTop.toFixed(1)} Q${(x+bW).toFixed(1)},${yTop.toFixed(1)} ${(x+bW).toFixed(1)},${(yTop+r).toFixed(1)} L${(x+bW).toFixed(1)},${(yTop+h).toFixed(1)} Z" fill="${color}"/>`;
+    const lbl = axisLabels ? `<text x="${(x+bW/2).toFixed(1)}" y="${(pad.top+cH+16).toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${s.l}</text>` : '';
+    const connector = i < steps.length-1 ? `<line x1="${(x+bW).toFixed(1)}" y1="${(s.pos?yTop:yTop+h).toFixed(1)}" x2="${(pad.left+slot*(i+1)+(slot-bW)/2).toFixed(1)}" y2="${(s.pos?yTop:yTop+h).toFixed(1)}" stroke="${gridColor}" stroke-width="1" stroke-dasharray="3 3"/>` : '';
+    return bar + lbl + connector;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${grid}${bars}</svg>`;
+}
+
+function renderBulletChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 28, right: 30, bottom: 28, left: 90 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, font, c0, barRadius: r, axisLabels } = chartTokens(theme);
+  const rows = [{l:'Revenue',range:.9,good:.65,val:.72,target:.75},{l:'Profit',range:.85,good:.6,val:.48,target:.7},{l:'Growth',range:1,good:.7,val:.83,target:.65}];
+  const rowH = cH / rows.length;
+  const bH = Math.round(rowH * 0.28), rangeH = Math.round(rowH * 0.55), goodH = Math.round(rowH * 0.42);
+  const dark = isColorDark(theme.bg);
+  const rangeFill = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)';
+  const goodFill  = dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)';
+  const bars = rows.map((row, i) => {
+    const cy = pad.top + rowH * i + rowH / 2;
+    const rangeY = cy - rangeH/2, goodY = cy - goodH/2, valY = cy - bH/2;
+    const rr = Math.min(r, 3);
+    const rangePath = rr===0 ? `<rect x="${pad.left}" y="${rangeY.toFixed(1)}" width="${(row.range*cW).toFixed(1)}" height="${rangeH}" fill="${rangeFill}"/>`
+      : `<rect x="${pad.left}" y="${rangeY.toFixed(1)}" width="${(row.range*cW).toFixed(1)}" height="${rangeH}" rx="${rr}" fill="${rangeFill}"/>`;
+    const goodPath = `<rect x="${pad.left}" y="${goodY.toFixed(1)}" width="${(row.good*cW).toFixed(1)}" height="${goodH}" rx="${rr}" fill="${goodFill}"/>`;
+    const valPath = rr===0 ? `<rect x="${pad.left}" y="${valY.toFixed(1)}" width="${(row.val*cW).toFixed(1)}" height="${bH}" fill="${c0}"/>`
+      : `<rect x="${pad.left}" y="${valY.toFixed(1)}" width="${(row.val*cW).toFixed(1)}" height="${bH}" rx="${rr}" fill="${c0}"/>`;
+    const tx = pad.left + row.target*cW;
+    const targetLine = `<line x1="${tx.toFixed(1)}" y1="${(cy-rangeH/2-2).toFixed(1)}" x2="${tx.toFixed(1)}" y2="${(cy+rangeH/2+2).toFixed(1)}" stroke="${textColor}" stroke-width="2.5"/>`;
+    const label = axisLabels ? `<text x="${pad.left-8}" y="${(cy+4).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">${row.l}</text>` : '';
+    return rangePath + goodPath + valPath + targetLine + label;
+  }).join('');
+  const xTicks = axisLabels ? [0,.25,.5,.75,1].map(t =>
+    `<text x="${(pad.left+t*cW).toFixed(1)}" y="${(H-8).toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${Math.round(t*100)}%</text>`
+  ).join('') : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${bars}${xTicks}</svg>`;
+}
+
+function renderFunnelChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 20, right: 60, bottom: 20, left: 60 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, font, c0, axisLabels } = chartTokens(theme);
+  const stages = [{l:'Visitors',v:1},{l:'Leads',v:.72},{l:'Qualified',v:.48},{l:'Proposals',v:.28},{l:'Closed',v:.14}];
+  const slotH = cH / stages.length;
+  const gap = 2;
+  const bars = stages.map((s,i) => {
+    const halfW = (s.v * cW) / 2;
+    const cx = W / 2;
+    const y = pad.top + i * slotH + gap/2;
+    const h = slotH - gap;
+    const color = theme.palette[i % theme.palette.length] || c0;
+    const x = cx - halfW;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(halfW*2).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${color}"/>` +
+      (axisLabels ? `<text x="${cx.toFixed(1)}" y="${(y+h/2+4.5).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="600" font-family="${font}" fill="rgba(255,255,255,0.9)">${s.l}</text>` : '');
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${bars}</svg>`;
+}
+
+function renderLollipopChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 16, right: 16, bottom: 36, left: 44 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, baseColor, font, c0, strokeW, gridDash, axisLabels } = chartTokens(theme);
+  const data = [{l:'Alpha',v:72},{l:'Beta',v:48},{l:'Gamma',v:88},{l:'Delta',v:35},{l:'Epsilon',v:61},{l:'Zeta',v:94}];
+  const { max, ticks } = niceScale(Math.max(...data.map(d=>d.v)));
+  const slot = cW/data.length;
+  const xMid = i => pad.left + slot*i + slot/2;
+  const yV = v => pad.top + cH - (v/max)*cH;
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const grid = ticks.map(t => {
+    const y = yV(t).toFixed(1);
+    return `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="${t===0?baseColor:gridColor}" stroke-width="1"${dash}/>` +
+      (axisLabels ? `<text x="${pad.left-6}" y="${(+y+4).toFixed(1)}" text-anchor="end" font-size="10" font-family="${font}" fill="${textColor}">${fmtTick(t)}</text>` : '');
+  }).join('');
+  const lollipops = data.map((d,i) => {
+    const x = xMid(i), yTop = yV(d.v), yBase = pad.top+cH;
+    const lbl = axisLabels ? `<text x="${x.toFixed(1)}" y="${(pad.top+cH+16).toFixed(1)}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${d.l}</text>` : '';
+    return `<line x1="${x.toFixed(1)}" y1="${yBase}" x2="${x.toFixed(1)}" y2="${(yTop+5).toFixed(1)}" stroke="${c0}" stroke-width="${strokeW*0.6}"/>` +
+           `<circle cx="${x.toFixed(1)}" cy="${yTop.toFixed(1)}" r="6" fill="${c0}" stroke="${theme.bg}" stroke-width="1.5"/>` + lbl;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${grid}${lollipops}</svg>`;
+}
+
+function renderDumbbellChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 16, right: 24, bottom: 16, left: 80 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, font, c0, gridDash, axisLabels } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0;
+  const rows = [{l:'Group A',a:.22,b:.68},{l:'Group B',a:.38,b:.75},{l:'Group C',a:.15,b:.55},{l:'Group D',a:.45,b:.80},{l:'Group E',a:.30,b:.62}];
+  const rowH = cH/rows.length;
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const vLines = [0,.25,.5,.75,1].map(t => {
+    const x = (pad.left + t*cW).toFixed(1);
+    return `<line x1="${x}" y1="${pad.top}" x2="${x}" y2="${pad.top+cH}" stroke="${gridColor}" stroke-width="1"${dash}/>`;
+  }).join('');
+  const dumbbells = rows.map((row,i) => {
+    const cy = pad.top + rowH*i + rowH/2;
+    const xA = pad.left + row.a*cW, xB = pad.left + row.b*cW;
+    const lbl = axisLabels ? `<text x="${pad.left-8}" y="${(cy+4).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">${row.l}</text>` : '';
+    return lbl +
+      `<line x1="${xA.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${xB.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${textColor}" stroke-width="1.5"/>` +
+      `<circle cx="${xA.toFixed(1)}" cy="${cy.toFixed(1)}" r="6" fill="${c0}" stroke="${theme.bg}" stroke-width="1.5"/>` +
+      `<circle cx="${xB.toFixed(1)}" cy="${cy.toFixed(1)}" r="6" fill="${c1}" stroke="${theme.bg}" stroke-width="1.5"/>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${vLines}${dumbbells}</svg>`;
+}
+
+function renderBubbleChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 20, right: 20, bottom: 36, left: 44 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, baseColor, font, c0, gridDash, axisLabels, glow } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0, c2 = theme.palette[2]||c1;
+  const bubbles = [
+    {x:.12,y:.65,r:14,ci:0},{x:.28,y:.28,r:28,ci:1},{x:.44,y:.58,r:10,ci:2},
+    {x:.60,y:.18,r:34,ci:0},{x:.75,y:.50,r:18,ci:1},{x:.88,y:.72,r:12,ci:2},
+    {x:.50,y:.82,r:8,ci:0},{x:.35,y:.45,r:22,ci:2},
+  ];
+  const colors = [c0,c1,c2];
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const grid = [0,.25,.5,.75,1].map(t => {
+    const y = (pad.top+cH-t*cH).toFixed(1);
+    return `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="${gridColor}" stroke-width="1"${dash}/>`;
+  }).join('');
+  const fid = glow ? 'gf'+Math.random().toString(36).slice(2,7) : '';
+  const filterDef = glow ? `<filter id="${fid}"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const glowAttr = glow ? ` filter="url(#${fid})"` : '';
+  const circles = bubbles.map(b =>
+    `<circle cx="${(pad.left+b.x*cW).toFixed(1)}" cy="${(pad.top+b.y*cH).toFixed(1)}" r="${b.r}" fill="${colors[b.ci]}" fill-opacity="0.72" stroke="${theme.bg}" stroke-width="1.5"${glowAttr}/>`
+  ).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${filterDef?`<defs>${filterDef}</defs>`:''}${grid}${circles}</svg>`;
+}
+
+function renderDotPlotSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 16, right: 24, bottom: 16, left: 80 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, font, c0, gridDash, axisLabels } = chartTokens(theme);
+  const rows = [{l:'Category A',v:.68},{l:'Category B',v:.42},{l:'Category C',v:.81},{l:'Category D',v:.30},{l:'Category E',v:.57}];
+  const rowH = cH/rows.length;
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const vLines = [0,.25,.5,.75,1].map(t => {
+    const x = (pad.left+t*cW).toFixed(1);
+    return `<line x1="${x}" y1="${pad.top}" x2="${x}" y2="${pad.top+cH}" stroke="${gridColor}" stroke-width="1"${dash}/>`;
+  }).join('');
+  const dots = rows.map((row,i) => {
+    const cy = pad.top + rowH*i + rowH/2;
+    const cx = pad.left + row.v*cW;
+    const lbl = axisLabels ? `<text x="${pad.left-8}" y="${(cy+4).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">${row.l}</text>` : '';
+    return lbl + `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="7" fill="${c0}"/>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${vLines}${dots}</svg>`;
+}
+
+function renderStripPlotSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 16, right: 24, bottom: 36, left: 70 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, font, c0, gridDash, axisLabels } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0, c2 = theme.palette[2]||c1;
+  const cats = [{l:'Group A',ci:0},{l:'Group B',ci:1},{l:'Group C',ci:2}];
+  const seed = [.12,.28,.38,.52,.61,.74,.82,.18,.33,.55,.70,.88,.09,.41,.63,.79,.25,.48,.67,.85];
+  const rowH = cH/cats.length;
+  const colors = [c0,c1,c2];
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const vLines = [0,.25,.5,.75,1].map(t => {
+    const x = (pad.left+t*cW).toFixed(1);
+    return `<line x1="${x}" y1="${pad.top}" x2="${x}" y2="${pad.top+cH}" stroke="${gridColor}" stroke-width="1"${dash}/>`;
+  }).join('');
+  let dots = '';
+  cats.forEach((cat,ci) => {
+    const cy = pad.top + rowH*ci + rowH/2;
+    seed.slice(ci*7, ci*7+7).forEach((v,j) => {
+      const cx = pad.left + v*cW;
+      const jitter = (j%3 - 1)*5;
+      dots += `<circle cx="${cx.toFixed(1)}" cy="${(cy+jitter).toFixed(1)}" r="4" fill="${colors[cat.ci]}" fill-opacity="0.75"/>`;
+    });
+    if (axisLabels) dots += `<text x="${pad.left-8}" y="${(cy+4).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">${cat.l}</text>`;
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${vLines}${dots}</svg>`;
+}
+
+function renderSparklineSVG(theme) {
+  const W = 560, H = 300;
+  const { c0, lineSmooth, strokeW, glow } = chartTokens(theme);
+  // Three sparklines side by side
+  const series = [
+    [42,55,48,62,58,72,65,80,75,88],
+    [80,72,65,70,60,55,62,50,45,52],
+    [30,38,45,40,55,48,58,65,60,72],
+  ];
+  const labels = ['Revenue','Costs','Margin'];
+  const sparkW = W/3, sparkH = H*0.4, sparkPad = 20;
+  const dark = isColorDark(theme.bg);
+  const textColor = dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.32)';
+  const fid = glow ? 'gf'+Math.random().toString(36).slice(2,7) : '';
+  const filterDef = glow ? `<filter id="${fid}"><feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const glowAttr = glow ? ` filter="url(#${fid})"` : '';
+  let content = '';
+  series.forEach((data,si) => {
+    const color = theme.palette[si] || c0;
+    const x0 = si*sparkW + sparkPad, y0 = H/2 - sparkH/2;
+    const w = sparkW - sparkPad*2, h = sparkH;
+    const min = Math.min(...data), max = Math.max(...data), range = max-min||1;
+    const xP = i => x0 + (i/(data.length-1))*w;
+    const yP = v => y0 + h - ((v-min)/range)*h;
+    const pts = data.map((v,i) => [xP(i),yP(v)]);
+    const pathD = pts.map(([x,y],i) => {
+      if (i===0) return `M${x.toFixed(1)},${y.toFixed(1)}`;
+      if (!lineSmooth) return `L${x.toFixed(1)},${y.toFixed(1)}`;
+      const [px,py] = pts[i-1];
+      const cx = ((px+x)/2).toFixed(1);
+      return `C${cx},${py.toFixed(1)} ${cx},${y.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    content += `<path d="${pathD}" stroke="${color}" stroke-width="${strokeW*0.8}" fill="none" stroke-linecap="round"${glowAttr}/>`;
+    content += `<circle cx="${pts[pts.length-1][0].toFixed(1)}" cy="${pts[pts.length-1][1].toFixed(1)}" r="3.5" fill="${color}"/>`;
+    content += `<text x="${(x0+w/2).toFixed(1)}" y="${(y0+h+20).toFixed(1)}" text-anchor="middle" font-size="11" font-family="${chartTokens(theme).font}" fill="${textColor}">${labels[si]}</text>`;
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${filterDef?`<defs>${filterDef}</defs>`:''}${content}</svg>`;
+}
+
+/* ── Batch 2 renderers ───────────────────────────────────────────────────── */
+
+function renderStepChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 20, right: 20, bottom: 36, left: 44 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, baseColor, font, c0, strokeW, gridDash, axisLabels, glow } = chartTokens(theme);
+  const data = [30,30,48,48,62,62,55,55,74,74,88,88];
+  const labels = ['Jan','','Mar','','May','','Jul','','Sep','','Nov',''];
+  const { max, ticks } = niceScale(Math.max(...data));
+  const n = data.length;
+  const xP = i => pad.left + (i/(n-1))*cW;
+  const yP = v => pad.top + cH - (v/max)*cH;
+  const pts = data.map((v,i) => [xP(i),yP(v)]);
+  const pathD = pts.map(([x,y],i) => i===0 ? `M${x.toFixed(1)},${y.toFixed(1)}` : `L${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const grid = ticks.map(t => {
+    const y = yP(t).toFixed(1);
+    return `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="${t===0?baseColor:gridColor}" stroke-width="1"${dash}/>` +
+      (axisLabels ? `<text x="${pad.left-6}" y="${(+y+4).toFixed(1)}" text-anchor="end" font-size="10" font-family="${font}" fill="${textColor}">${fmtTick(t)}</text>` : '');
+  }).join('');
+  const xLbls = axisLabels ? labels.map((l,i) => l ? `<text x="${xP(i).toFixed(1)}" y="${(pad.top+cH+16).toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${l}</text>` : '').join('') : '';
+  const fid = glow ? 'gf'+Math.random().toString(36).slice(2,7) : '';
+  const filterDef = glow ? `<filter id="${fid}"><feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${filterDef?`<defs>${filterDef}</defs>`:''}${grid}<path d="${pathD}" stroke="${c0}" stroke-width="${strokeW}" fill="none" stroke-linecap="square"${glow?` filter="url(#${fid})"`:''}/>${xLbls}</svg>`;
+}
+
+function renderSlopeChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 30, right: 80, bottom: 30, left: 80 };
+  const cH = H - pad.top - pad.bottom;
+  const { textColor, font, c0, strokeW } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0, c2 = theme.palette[2]||c1;
+  const rows = [{l:'Alpha',a:.85,b:.62,ci:0},{l:'Beta',a:.60,b:.78,ci:1},{l:'Gamma',a:.40,b:.55,ci:2},{l:'Delta',a:.72,b:.38,ci:0},{l:'Epsilon',a:.30,b:.65,ci:1}];
+  const colors = [c0,c1,c2];
+  const xL = pad.left, xR = W-pad.right;
+  const yP = v => pad.top + (1-v)*cH;
+  const lines = rows.map(r => {
+    const yA = yP(r.a), yB = yP(r.b);
+    return `<line x1="${xL}" y1="${yA.toFixed(1)}" x2="${xR}" y2="${yB.toFixed(1)}" stroke="${colors[r.ci]}" stroke-width="${strokeW*0.7}" stroke-opacity="0.85"/>` +
+      `<circle cx="${xL}" cy="${yA.toFixed(1)}" r="4.5" fill="${colors[r.ci]}"/>` +
+      `<circle cx="${xR}" cy="${yB.toFixed(1)}" r="4.5" fill="${colors[r.ci]}"/>` +
+      `<text x="${xL-8}" y="${(yA+4).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">${r.l}</text>`;
+  }).join('');
+  const colLbl = `<text x="${xL}" y="${pad.top-14}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">2022</text>` +
+    `<text x="${xR}" y="${pad.top-14}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">2023</text>`;
+  const axes = `<line x1="${xL}" y1="${pad.top-8}" x2="${xL}" y2="${pad.top+cH}" stroke="${textColor}" stroke-width="1"/>` +
+    `<line x1="${xR}" y1="${pad.top-8}" x2="${xR}" y2="${pad.top+cH}" stroke="${textColor}" stroke-width="1"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${axes}${colLbl}${lines}</svg>`;
+}
+
+function renderBumpChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 20, right: 50, bottom: 20, left: 50 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, font, c0, strokeW, lineSmooth } = chartTokens(theme);
+  const series = [
+    {l:'A', ranks:[1,2,1,3,2,1], ci:0},
+    {l:'B', ranks:[2,1,3,1,3,2], ci:1},
+    {l:'C', ranks:[3,3,2,2,1,3], ci:2},
+  ];
+  const nRanks = 3, nTime = 6;
+  const colors = [c0, theme.palette[1]||c0, theme.palette[2]||c0];
+  const xP = i => pad.left + (i/(nTime-1))*cW;
+  const yP = r => pad.top + ((r-1)/(nRanks-1))*cH;
+  const paths = series.map(s => {
+    const pts = s.ranks.map((r,i) => [xP(i), yP(r)]);
+    const d = pts.map(([x,y],i) => {
+      if (i===0) return `M${x.toFixed(1)},${y.toFixed(1)}`;
+      if (!lineSmooth) return `L${x.toFixed(1)},${y.toFixed(1)}`;
+      const [px,py] = pts[i-1];
+      const cx = ((px+x)/2).toFixed(1);
+      return `C${cx},${py.toFixed(1)} ${cx},${y.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const lastPt = pts[pts.length-1];
+    return `<path d="${d}" stroke="${colors[s.ci]}" stroke-width="${strokeW*0.85}" fill="none" stroke-linecap="round"/>` +
+      `<circle cx="${pts[0][0].toFixed(1)}" cy="${pts[0][1].toFixed(1)}" r="4" fill="${colors[s.ci]}"/>` +
+      `<circle cx="${lastPt[0].toFixed(1)}" cy="${lastPt[1].toFixed(1)}" r="4" fill="${colors[s.ci]}"/>` +
+      `<text x="${(lastPt[0]+8).toFixed(1)}" y="${(lastPt[1]+4).toFixed(1)}" font-size="11" font-family="${font}" fill="${textColor}">${s.l}</text>`;
+  }).join('');
+  const rankLbls = [1,2,3].map(r => `<text x="${pad.left-8}" y="${(yP(r)+4).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">#${r}</text>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${rankLbls}${paths}</svg>`;
+}
+
+function renderStackedAreaChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 16, right: 16, bottom: 36, left: 44 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, baseColor, font, c0, lineSmooth, strokeW, gridDash, axisLabels } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0, c2 = theme.palette[2]||c1;
+  const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'];
+  const s0 = [20,24,22,28,30,26,32,35];
+  const s1 = [15,18,20,16,22,24,20,25];
+  const s2 = [10,12,14,18,12,16,20,18];
+  const n = labels.length;
+  const max = Math.max(...s0.map((v,i)=>v+s1[i]+s2[i]));
+  const xP = i => pad.left+(i/(n-1))*cW;
+  const yP = v => pad.top+cH-(v/max)*cH;
+  const makeLine = (vals, bases) => vals.map((v,i) => {
+    const x=xP(i), y=yP(v+bases[i]);
+    if (i===0) return `M${x.toFixed(1)},${y.toFixed(1)}`;
+    if (!lineSmooth) return `L${x.toFixed(1)},${y.toFixed(1)}`;
+    const px=xP(i-1), py=yP(vals[i-1]+bases[i-1]);
+    const cx=((px+x)/2).toFixed(1);
+    return `C${cx},${py.toFixed(1)} ${cx},${y.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const zeros = s0.map(()=>0);
+  const tops0 = s0.map(()=>0); // base = 0
+  const tops1 = s0; // base = s0
+  const tops2 = s0.map((v,i)=>v+s1[i]); // base = s0+s1
+  const path0 = makeLine(s0,zeros);
+  const path1 = makeLine(s1,tops1);
+  const path2 = makeLine(s2,tops2);
+  const base = (pad.top+cH).toFixed(1);
+  const close0 = ` L${xP(n-1).toFixed(1)},${yP(s0[n-1]).toFixed(1)} ${s0.map((_,i)=>`L${xP(n-1-i).toFixed(1)},${base}`).slice(-1)} L${xP(0).toFixed(1)},${base} Z`;
+  // Simpler approach: just close each area back to its base line
+  const area0 = path0 + ` L${xP(n-1).toFixed(1)},${base} L${xP(0).toFixed(1)},${base} Z`;
+  const revPath1 = [...s1].reverse().map((v,ri) => { const i=n-1-ri; return `L${xP(i).toFixed(1)},${yP(s0[i]).toFixed(1)}`; }).join(' ');
+  const revPath2 = [...s2].reverse().map((v,ri) => { const i=n-1-ri; return `L${xP(i).toFixed(1)},${yP(s0[i]+s1[i]).toFixed(1)}`; }).join(' ');
+  const area1 = path1 + ` ${revPath1} Z`;
+  const area2 = path2 + ` ${revPath2} Z`;
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const grid = [0,.25,.5,.75,1].map(t => {
+    const y = (pad.top+cH-t*cH).toFixed(1);
+    return `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="${gridColor}" stroke-width="1"${dash}/>`;
+  }).join('');
+  const xLbls = axisLabels ? labels.map((l,i) => i%2===0 ? `<text x="${xP(i).toFixed(1)}" y="${(pad.top+cH+16).toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${l}</text>` : '').join('') : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>` +
+    `${grid}<path d="${area2}" fill="${c2}" fill-opacity="0.85"/><path d="${area1}" fill="${c1}" fill-opacity="0.85"/><path d="${area0}" fill="${c0}" fill-opacity="0.85"/>` +
+    `<path d="${path2}" stroke="${c2}" stroke-width="${strokeW*0.6}" fill="none"/><path d="${path1}" stroke="${c1}" stroke-width="${strokeW*0.6}" fill="none"/><path d="${path0}" stroke="${c0}" stroke-width="${strokeW*0.6}" fill="none"/>` +
+    `${xLbls}</svg>`;
+}
+
+function renderStreamgraphSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 10, right: 16, bottom: 10, left: 16 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { c0, lineSmooth } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0, c2 = theme.palette[2]||c1, c3 = theme.palette[3]||c0;
+  // Each stream: array of [top offset, height] at each time step, centered on 0
+  const n = 10;
+  const streams = [
+    { heights:[10,14,18,22,20,16,14,18,22,20], color:c0 },
+    { heights:[8,10,14,18,22,20,16,12,10,14],  color:c1 },
+    { heights:[6,8,10,8,12,14,16,14,10,8],      color:c2 },
+    { heights:[4,6,8,6,8,10,8,6,8,10],          color:c3 },
+  ];
+  // Compute baselines (streamgraph stacks symmetrically around center)
+  const totals = Array(n).fill(0);
+  streams.forEach(s => s.heights.forEach((h,i) => totals[i] += h));
+  const maxTotal = Math.max(...totals);
+  const cy = pad.top + cH/2;
+  const xP = i => pad.left + (i/(n-1))*cW;
+  const yScale = (cH*0.85) / (maxTotal);
+  let runningBase = Array(n).fill(0);
+  const paths = streams.map(s => {
+    const tops = s.heights.map((h,i) => runningBase[i] + h);
+    const topPts = tops.map((v,i) => [xP(i), cy - (v - totals[i]/2) * yScale]);
+    const botPts = runningBase.map((v,i) => [xP(i), cy - (v - totals[i]/2) * yScale]);
+    runningBase = tops;
+    const makePath = pts => pts.map(([x,y],i) => {
+      if (i===0) return `M${x.toFixed(1)},${y.toFixed(1)}`;
+      if (!lineSmooth) return `L${x.toFixed(1)},${y.toFixed(1)}`;
+      const [px,py] = pts[i-1]; const cx = ((px+x)/2).toFixed(1);
+      return `C${cx},${py.toFixed(1)} ${cx},${y.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const revBot = [...botPts].reverse();
+    return `<path d="${makePath(topPts)} ${makePath(revBot).replace('M','L')} Z" fill="${s.color}" fill-opacity="0.88"/>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${paths}</svg>`;
+}
+
+function renderConnectedScatterSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 20, right: 20, bottom: 36, left: 44 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, font, c0, strokeW, lineSmooth, gridDash, axisLabels } = chartTokens(theme);
+  const pts = [[15,80],[25,65],[40,70],[55,45],[60,55],[75,30],[85,40],[90,20]];
+  const xP = v => pad.left+(v/100)*cW, yP = v => pad.top+cH-(v/100)*cH;
+  const coords = pts.map(([x,y]) => [xP(x), yP(y)]);
+  const pathD = coords.map(([x,y],i) => {
+    if (i===0) return `M${x.toFixed(1)},${y.toFixed(1)}`;
+    if (!lineSmooth) return `L${x.toFixed(1)},${y.toFixed(1)}`;
+    const [px,py] = coords[i-1]; const cx = ((px+x)/2).toFixed(1);
+    return `C${cx},${py.toFixed(1)} ${cx},${y.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const grid = [0,25,50,75,100].map(t => {
+    const y = yP(t).toFixed(1);
+    return `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="${gridColor}" stroke-width="1"${dash}/>` +
+      (axisLabels ? `<text x="${pad.left-6}" y="${(+y+4).toFixed(1)}" text-anchor="end" font-size="10" font-family="${font}" fill="${textColor}">${t}</text>` : '');
+  }).join('');
+  const dots = coords.map(([x,y],i) =>
+    `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${c0}" stroke="${theme.bg}" stroke-width="2"/>` +
+    (axisLabels ? `<text x="${x.toFixed(1)}" y="${(y-9).toFixed(1)}" text-anchor="middle" font-size="9" font-family="${font}" fill="${textColor}">'${(i+14).toString().padStart(2,'0')}</text>` : '')
+  ).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${grid}<path d="${pathD}" stroke="${c0}" stroke-width="${strokeW*0.7}" fill="none" stroke-opacity="0.5"/>${dots}</svg>`;
+}
+
+function renderBoxPlotSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 20, right: 20, bottom: 36, left: 44 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, baseColor, font, c0, gridDash, axisLabels } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0, c2 = theme.palette[2]||c1;
+  const boxes = [
+    {l:'A',min:.1,q1:.28,med:.45,q3:.62,max:.88,ci:0},
+    {l:'B',min:.18,q1:.35,med:.55,q3:.70,max:.90,ci:1},
+    {l:'C',min:.05,q1:.22,med:.38,q3:.58,max:.78,ci:2},
+  ];
+  const colors = [c0,c1,c2];
+  const slot = cW/boxes.length, bW = Math.round(slot*0.4);
+  const yP = v => pad.top + cH - v*cH;
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const grid = [0,.25,.5,.75,1].map(t => {
+    const y = yP(t).toFixed(1);
+    return `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="${gridColor}" stroke-width="1"${dash}/>` +
+      (axisLabels ? `<text x="${pad.left-6}" y="${(+y+4).toFixed(1)}" text-anchor="end" font-size="10" font-family="${font}" fill="${textColor}">${Math.round(t*100)}</text>` : '');
+  }).join('');
+  const bxs = boxes.map((b,i) => {
+    const cx = pad.left + slot*i + slot/2;
+    const x = cx - bW/2;
+    const yMin=yP(b.min), yQ1=yP(b.q1), yMed=yP(b.med), yQ3=yP(b.q3), yMax=yP(b.max);
+    const lbl = axisLabels ? `<text x="${cx.toFixed(1)}" y="${(pad.top+cH+16).toFixed(1)}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${b.l}</text>` : '';
+    return `<line x1="${cx.toFixed(1)}" y1="${yMin.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${yMax.toFixed(1)}" stroke="${colors[b.ci]}" stroke-width="1.5"/>` +
+      `<line x1="${(cx-bW/4).toFixed(1)}" y1="${yMin.toFixed(1)}" x2="${(cx+bW/4).toFixed(1)}" y2="${yMin.toFixed(1)}" stroke="${colors[b.ci]}" stroke-width="1.5"/>` +
+      `<line x1="${(cx-bW/4).toFixed(1)}" y1="${yMax.toFixed(1)}" x2="${(cx+bW/4).toFixed(1)}" y2="${yMax.toFixed(1)}" stroke="${colors[b.ci]}" stroke-width="1.5"/>` +
+      `<rect x="${x.toFixed(1)}" y="${yQ3.toFixed(1)}" width="${bW}" height="${(yQ1-yQ3).toFixed(1)}" fill="${colors[b.ci]}" fill-opacity="0.25" stroke="${colors[b.ci]}" stroke-width="1.5"/>` +
+      `<line x1="${x.toFixed(1)}" y1="${yMed.toFixed(1)}" x2="${(x+bW).toFixed(1)}" y2="${yMed.toFixed(1)}" stroke="${colors[b.ci]}" stroke-width="2.5"/>` + lbl;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${grid}${bxs}</svg>`;
+}
+
+function renderViolinPlotSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 16, right: 20, bottom: 36, left: 44 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, font, c0, axisLabels } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0, c2 = theme.palette[2]||c1;
+  const violins = [
+    {l:'A',ci:0,shape:[2,4,8,14,20,28,34,28,20,14,8,4,2]},
+    {l:'B',ci:1,shape:[2,6,12,22,30,26,20,28,24,16,10,6,2]},
+    {l:'C',ci:2,shape:[2,4,10,18,28,36,28,18,10,4,2,2,2]},
+  ];
+  const colors = [c0,c1,c2];
+  const slot = cW/violins.length;
+  const maxW = slot*0.38;
+  const vParts = violins.map((v,i) => {
+    const cx = pad.left + slot*i + slot/2;
+    const n = v.shape.length;
+    const maxS = Math.max(...v.shape);
+    const yStep = cH/(n-1);
+    const rightPts = v.shape.map((s,j) => `${(cx+s/maxS*maxW).toFixed(1)},${(pad.top+j*yStep).toFixed(1)}`).join(' ');
+    const leftPts = [...v.shape].reverse().map((s,j) => `${(cx-s/maxS*maxW).toFixed(1)},${(pad.top+(n-1-j)*yStep).toFixed(1)}`).join(' ');
+    const lbl = axisLabels ? `<text x="${cx.toFixed(1)}" y="${(pad.top+cH+16).toFixed(1)}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${v.l}</text>` : '';
+    return `<polygon points="${rightPts} ${leftPts}" fill="${colors[v.ci]}" fill-opacity="0.35" stroke="${colors[v.ci]}" stroke-width="1.5"/>` + lbl;
+  }).join('');
+  const grid = [0,.25,.5,.75,1].map(t => `<line x1="${pad.left}" y1="${(pad.top+t*cH).toFixed(1)}" x2="${W-pad.right}" y2="${(pad.top+t*cH).toFixed(1)}" stroke="${gridColor}" stroke-width="1"/>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${grid}${vParts}</svg>`;
+}
+
+function renderDensityPlotSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 20, right: 20, bottom: 36, left: 44 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { gridColor, c0, strokeW, areaFill, glow } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0;
+  // Two overlapping density curves
+  const gauss = (x, mu, sig) => Math.exp(-0.5*((x-mu)/sig)**2);
+  const n = 60;
+  const curve = (mu, sig) => Array.from({length:n}, (_,i) => gauss(i/(n-1), mu, sig));
+  const d0 = curve(0.35, 0.18), d1 = curve(0.62, 0.15);
+  const max = Math.max(...d0, ...d1);
+  const xP = i => pad.left+(i/(n-1))*cW;
+  const yP = v => pad.top+cH-(v/max)*cH;
+  const makePath = data => data.map((v,i) => (i===0?`M`:` L`)+`${xP(i).toFixed(1)},${yP(v).toFixed(1)}`).join('');
+  const p0 = makePath(d0), p1 = makePath(d1);
+  const base = pad.top+cH;
+  const a0 = p0+` L${xP(n-1).toFixed(1)},${base} L${xP(0).toFixed(1)},${base} Z`;
+  const a1 = p1+` L${xP(n-1).toFixed(1)},${base} L${xP(0).toFixed(1)},${base} Z`;
+  const fid = glow ? 'gf'+Math.random().toString(36).slice(2,7) : '';
+  const filterDef = glow ? `<filter id="${fid}"><feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const af0 = areaFill !== 'none' ? `<path d="${a0}" fill="${c0}" fill-opacity="0.18"/>` : '';
+  const af1 = areaFill !== 'none' ? `<path d="${a1}" fill="${c1}" fill-opacity="0.18"/>` : '';
+  const grid = `<line x1="${pad.left}" y1="${(pad.top+cH).toFixed(1)}" x2="${W-pad.right}" y2="${(pad.top+cH).toFixed(1)}" stroke="${gridColor}" stroke-width="1"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${filterDef?`<defs>${filterDef}</defs>`:''}${grid}${af0}${af1}<path d="${p0}" stroke="${c0}" stroke-width="${strokeW}" fill="none" stroke-linecap="round"${glow?` filter="url(#${fid})"`:''}/><path d="${p1}" stroke="${c1}" stroke-width="${strokeW}" fill="none" stroke-linecap="round"${glow?` filter="url(#${fid})"`:''}/>  </svg>`;
+}
+
+function renderRidgePlotSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 10, right: 20, bottom: 20, left: 70 };
+  const cW = W - pad.left - pad.right;
+  const { textColor, font, c0, strokeW } = chartTokens(theme);
+  const rows = [
+    {l:'2020', mu:.40, sig:.16},
+    {l:'2021', mu:.48, sig:.14},
+    {l:'2022', mu:.55, sig:.15},
+    {l:'2023', mu:.62, sig:.13},
+  ];
+  const rowH = (H-pad.top-pad.bottom)/rows.length;
+  const n = 50;
+  const gauss = (x, mu, sig) => Math.exp(-0.5*((x-mu)/sig)**2);
+  const ridges = rows.map((row,ri) => {
+    const color = theme.palette[ri % theme.palette.length] || c0;
+    const baseY = pad.top + (ri+1)*rowH;
+    const data = Array.from({length:n}, (_,i) => gauss(i/(n-1), row.mu, row.sig));
+    const maxD = Math.max(...data);
+    const xP = i => pad.left+(i/(n-1))*cW;
+    const yP = v => baseY - (v/maxD)*rowH*0.85;
+    const pathD = data.map((v,i) => (i===0?'M':'L')+`${xP(i).toFixed(1)},${yP(v).toFixed(1)}`).join(' ');
+    const areaD = pathD + ` L${xP(n-1).toFixed(1)},${baseY} L${xP(0).toFixed(1)},${baseY} Z`;
+    return `<path d="${areaD}" fill="${color}" fill-opacity="0.45"/>` +
+      `<path d="${pathD}" stroke="${color}" stroke-width="${strokeW*0.7}" fill="none"/>` +
+      `<text x="${pad.left-8}" y="${(baseY-rowH*0.3).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">${row.l}</text>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${ridges}</svg>`;
+}
+
+function renderParallelCoordsSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 30, right: 40, bottom: 30, left: 40 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, font, c0, strokeW } = chartTokens(theme);
+  const axes = ['Speed','Power','Agility','Endurance','Skill'];
+  const nAxes = axes.length;
+  const series = [
+    [.8,.6,.7,.4,.9],[.5,.9,.4,.8,.6],[.7,.3,.9,.6,.5],
+    [.3,.7,.5,.9,.4],[.6,.5,.8,.3,.7],[.9,.4,.6,.7,.8],
+  ];
+  const xA = i => pad.left + (i/(nAxes-1))*cW;
+  const yP = v => pad.top + (1-v)*cH;
+  const axisLines = axes.map((_,i) => {
+    const x = xA(i).toFixed(1);
+    return `<line x1="${x}" y1="${pad.top}" x2="${x}" y2="${pad.top+cH}" stroke="${gridColor}" stroke-width="1"/>` +
+      `<text x="${x}" y="${(pad.top-8).toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${axes[i]}</text>`;
+  }).join('');
+  const lines = series.map((s,si) => {
+    const color = theme.palette[si % theme.palette.length] || c0;
+    const d = s.map((v,i) => (i===0?'M':'L')+`${xA(i).toFixed(1)},${yP(v).toFixed(1)}`).join(' ');
+    return `<path d="${d}" stroke="${color}" stroke-width="${strokeW*0.65}" fill="none" stroke-opacity="0.7"/>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${lines}${axisLines}</svg>`;
+}
+
+function renderWaffleChartSVG(theme) {
+  const W = 560, H = 300;
+  const { c0, barRadius: r } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0;
+  const dark = isColorDark(theme.bg);
+  const emptyFill = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+  const cols = 10, rows = 10, total = 100;
+  const filled = 63; // 63% filled
+  const cellSize = Math.min((W-80)/cols, (H-40)/rows);
+  const gap = 3;
+  const gridW = cols*(cellSize+gap)-gap, gridH = rows*(cellSize+gap)-gap;
+  const ox = (W-gridW)/2, oy = (H-gridH)/2;
+  const rr = Math.min(r, 3);
+  let cells = '';
+  for (let row=0; row<rows; row++) {
+    for (let col=0; col<cols; col++) {
+      const idx = row*cols+col;
+      const x = ox+col*(cellSize+gap), y = oy+row*(cellSize+gap);
+      const fill = idx < filled ? (idx < 40 ? c0 : c1) : emptyFill;
+      cells += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${cellSize}" height="${cellSize}" rx="${rr}" fill="${fill}"/>`;
+    }
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${cells}</svg>`;
+}
+
+function renderHeatmapSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 30, right: 16, bottom: 36, left: 60 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, font, c0, barRadius: r, axisLabels } = chartTokens(theme);
+  const cols = ['Mon','Tue','Wed','Thu','Fri'];
+  const rows = ['Morning','Afternoon','Evening','Night'];
+  const vals = [[.3,.5,.7,.4,.6],[.8,.9,.6,.8,.7],[.5,.6,.9,.7,.5],[.2,.3,.4,.5,.2]];
+  const cW2 = cW/cols.length, rH = cH/rows.length;
+  const rr = Math.min(r, 4);
+  const cells = rows.map((row,ri) =>
+    cols.map((col,ci) => {
+      const v = vals[ri][ci];
+      const x = pad.left+ci*cW2+2, y = pad.top+ri*rH+2, w = cW2-4, h = rH-4;
+      const alpha = (0.12 + v*0.88).toFixed(2);
+      const fill = `color-mix(in srgb, ${c0} ${Math.round(v*100)}%, transparent)`;
+      // Fallback: use opacity on solid color
+      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="${rr}" fill="${c0}" fill-opacity="${alpha}"/>` +
+        (axisLabels && ri===0 ? `<text x="${(x+w/2).toFixed(1)}" y="${(pad.top-8).toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${col}</text>` : '') +
+        (axisLabels && ci===0 ? `<text x="${(pad.left-6).toFixed(1)}" y="${(y+h/2+4).toFixed(1)}" text-anchor="end" font-size="10" font-family="${font}" fill="${textColor}">${row}</text>` : '');
+    }).join('')
+  ).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${cells}</svg>`;
+}
+
+function renderCalendarHeatmapSVG(theme) {
+  const W = 560, H = 300;
+  const { c0, barRadius: r } = chartTokens(theme);
+  const dark = isColorDark(theme.bg);
+  const emptyFill = dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const weeks = 18, days = 7;
+  const cellSize = Math.min((W-60)/weeks, (H-40)/days);
+  const gap = 3;
+  const gridW = weeks*(cellSize+gap)-gap, gridH = days*(cellSize+gap)-gap;
+  const ox = (W-gridW)/2, oy = (H-gridH)/2;
+  const seed = [0,.1,.3,.6,.9,.4,.2,.7,.5,.8,.3,.1,.6,.4,.9,.2,.5,.8,.3,.7,.4,.1,.6,.9,.2,.5,.8,.4,.7,.3];
+  const rr = Math.min(r, 3);
+  let cells = '';
+  for (let w=0; w<weeks; w++) {
+    for (let d=0; d<days; d++) {
+      const v = seed[(w*7+d) % seed.length];
+      const x = ox+w*(cellSize+gap), y = oy+d*(cellSize+gap);
+      const opacity = v < 0.05 ? 0 : (0.1 + v*0.9).toFixed(2);
+      cells += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${cellSize}" height="${cellSize}" rx="${rr}" fill="${v < 0.05 ? emptyFill : c0}" fill-opacity="${v < 0.05 ? '1' : opacity}"/>`;
+    }
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${cells}</svg>`;
+}
+
+function renderBeeswarmPlotSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 16, right: 24, bottom: 36, left: 70 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, font, c0, gridDash, axisLabels } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0, c2 = theme.palette[2]||c1;
+  const cats = [{l:'Group A',ci:0},{l:'Group B',ci:1},{l:'Group C',ci:2}];
+  const positions = [
+    [.12,.28,.35,.42,.50,.58,.65,.72,.80,.88],
+    [.15,.22,.38,.45,.55,.62,.70,.78,.85,.92],
+    [.08,.18,.32,.48,.52,.60,.68,.75,.82,.90],
+  ];
+  const rowH = cH/cats.length;
+  const colors = [c0,c1,c2];
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const vLines = [0,.25,.5,.75,1].map(t =>
+    `<line x1="${(pad.left+t*cW).toFixed(1)}" y1="${pad.top}" x2="${(pad.left+t*cW).toFixed(1)}" y2="${pad.top+cH}" stroke="${gridColor}" stroke-width="1"${dash}/>`
+  ).join('');
+  let dots = '';
+  cats.forEach((cat,ci) => {
+    const cy = pad.top + rowH*ci + rowH/2;
+    positions[ci].forEach((v,j) => {
+      const jitter = [-6,-3,0,3,6,-4,4,-2,2,0][j] || 0;
+      dots += `<circle cx="${(pad.left+v*cW).toFixed(1)}" cy="${(cy+jitter).toFixed(1)}" r="4.5" fill="${colors[cat.ci]}" fill-opacity="0.80"/>`;
+    });
+    if (axisLabels) dots += `<text x="${pad.left-8}" y="${(cy+4).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">${cat.l}</text>`;
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${vLines}${dots}</svg>`;
+}
+
+/* ── Batch 3 renderers ───────────────────────────────────────────────────── */
+
+function renderRadarChartSVG(theme) {
+  const W = 560, H = 300;
+  const cx = W/2, cy = H/2, R = Math.min(cx,cy)-30;
+  const { textColor, gridColor, font, c0, strokeW, areaFill } = chartTokens(theme);
+  const c1 = theme.palette[1]||c0;
+  const axes = ['Speed','Power','Range','Defence','Stamina','Skill'];
+  const n = axes.length;
+  const s0 = [.8,.6,.9,.5,.7,.75], s1 = [.5,.85,.55,.8,.6,.45];
+  const pt = (r,i) => { const a = (i/n)*Math.PI*2 - Math.PI/2; return [cx+r*Math.cos(a), cy+r*Math.sin(a)]; };
+  const webLines = [.25,.5,.75,1].map(f =>
+    axes.map((_,i) => { const [x,y]=pt(R*f,i); return (i===0?`M${x.toFixed(1)},${y.toFixed(1)}`:`L${x.toFixed(1)},${y.toFixed(1)}`); }).join(' ')+' Z'
+  ).map(d => `<path d="${d}" stroke="${gridColor}" stroke-width="1" fill="none"/>`).join('');
+  const spokes = axes.map((_,i) => { const [x,y]=pt(R,i); return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${gridColor}" stroke-width="1"/>`; }).join('');
+  const axisLabels = axes.map((a,i) => { const [x,y]=pt(R+16,i); return `<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${a}</text>`; }).join('');
+  const polyPath = vals => vals.map((v,i) => { const [x,y]=pt(R*v,i); return (i===0?`M${x.toFixed(1)},${y.toFixed(1)}`:`L${x.toFixed(1)},${y.toFixed(1)}`); }).join(' ')+' Z';
+  const p0 = polyPath(s0), p1 = polyPath(s1);
+  const fill0 = areaFill!=='none' ? `<path d="${p0}" fill="${c0}" fill-opacity="0.20"/>` : '';
+  const fill1 = areaFill!=='none' ? `<path d="${p1}" fill="${c1}" fill-opacity="0.15"/>` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${webLines}${spokes}${fill0}${fill1}<path d="${p0}" stroke="${c0}" stroke-width="${strokeW}" fill="none"/><path d="${p1}" stroke="${c1}" stroke-width="${strokeW}" fill="none"/>${axisLabels}</svg>`;
+}
+
+function renderTreemapSVG(theme) {
+  const W = 560, H = 300;
+  const pad = 8;
+  const { c0, barRadius: r } = chartTokens(theme);
+  const dark = isColorDark(theme.bg);
+  const textCol = 'rgba(255,255,255,0.9)';
+  // Hard-coded treemap layout (proportional rectangles)
+  const rr = Math.min(r, 4);
+  const tiles = [
+    {x:pad,      y:pad,     w:220, h:185, ci:0, l:'Category A'},
+    {x:pad+222,  y:pad,     w:160, h:185, ci:1, l:'Category B'},
+    {x:pad+384,  y:pad,     w:160, h:185, ci:2, l:'Category C'},
+    {x:pad,      y:pad+187, w:130, h:105, ci:3, l:'D'},
+    {x:pad+132,  y:pad+187, w:100, h:105, ci:0, l:'E'},
+    {x:pad+234,  y:pad+187, w:90,  h:105, ci:1, l:'F'},
+    {x:pad+326,  y:pad+187, w:110, h:105, ci:2, l:'G'},
+    {x:pad+438,  y:pad+187, w:106, h:105, ci:3, l:'H'},
+  ];
+  const colors = [c0, theme.palette[1]||c0, theme.palette[2]||c0, theme.palette[3]||c0];
+  const cells = tiles.map(t =>
+    `<rect x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}" rx="${rr}" fill="${colors[t.ci]}" fill-opacity="0.85"/>` +
+    `<text x="${(t.x+t.w/2).toFixed(1)}" y="${(t.y+t.h/2+4.5).toFixed(1)}" text-anchor="middle" font-size="${t.w>80?11:9}" fill="${textCol}" font-weight="500">${t.l}</text>`
+  ).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${cells}</svg>`;
+}
+
+function renderSunburstChartSVG(theme) {
+  const W = 560, H = 300;
+  const cx = W/2, cy = H/2;
+  const R2 = Math.min(cx,cy)-12, R1 = R2*0.52, R0 = R1*0.52;
+  const { c0 } = chartTokens(theme);
+  const slice = (r1,r2,a1,a2,color,op=1) => {
+    const cos = Math.cos, sin = Math.sin;
+    const x1=cx+r2*cos(a1),y1=cy+r2*sin(a1),x2=cx+r2*cos(a2),y2=cy+r2*sin(a2);
+    const x3=cx+r1*cos(a2),y3=cy+r1*sin(a2),x4=cx+r1*cos(a1),y4=cy+r1*sin(a1);
+    const large=a2-a1>Math.PI?1:0;
+    return `<path d="M${x1.toFixed(1)},${y1.toFixed(1)} A${r2},${r2} 0 ${large} 1 ${x2.toFixed(1)},${y2.toFixed(1)} L${x3.toFixed(1)},${y3.toFixed(1)} A${r1},${r1} 0 ${large} 0 ${x4.toFixed(1)},${y4.toFixed(1)} Z" fill="${color}" fill-opacity="${op}" stroke="${theme.bg}" stroke-width="1.5"/>`;
+  };
+  const tau = Math.PI*2;
+  // Inner ring (3 segments)
+  const inner = [
+    [0, .42*tau, c0],
+    [.42*tau, .72*tau, theme.palette[1]||c0],
+    [.72*tau, tau,     theme.palette[2]||c0],
+  ].map(([a1,a2,col]) => slice(R0,R1,a1-Math.PI/2,a2-Math.PI/2,col));
+  // Outer ring (6 segments)
+  const outer = [
+    [0,.20*tau],[.20*tau,.42*tau],[.42*tau,.56*tau],
+    [.56*tau,.72*tau],[.72*tau,.86*tau],[.86*tau,tau],
+  ].map(([a1,a2],i) => slice(R1,R2,a1-Math.PI/2,a2-Math.PI/2,theme.palette[i%theme.palette.length]||c0,0.7));
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${inner.join('')}${outer.join('')}</svg>`;
+}
+
+function renderChordDiagramSVG(theme) {
+  const W = 560, H = 300;
+  const cx = W/2, cy = H/2, R = Math.min(cx,cy)-20, arcW = 16;
+  const { c0 } = chartTokens(theme);
+  const groups = [
+    {a1:-.1,   a2:.55,  ci:0},
+    {a1:.60,   a2:1.2,  ci:1},
+    {a1:1.25,  a2:1.95, ci:2},
+    {a1:2.0,   a2:2.8,  ci:3},
+    {a1:2.85,  a2:3.6,  ci:0},
+  ];
+  const colors = [c0, theme.palette[1]||c0, theme.palette[2]||c0, theme.palette[3]||c0];
+  const arc = (r1,r2,a1,a2,color) => {
+    const cos=Math.cos, sin=Math.sin;
+    const x1=cx+r2*cos(a1),y1=cy+r2*sin(a1),x2=cx+r2*cos(a2),y2=cy+r2*sin(a2);
+    const x3=cx+r1*cos(a2),y3=cy+r1*sin(a2),x4=cx+r1*cos(a1),y4=cy+r1*sin(a1);
+    const large=a2-a1>Math.PI?1:0;
+    return `<path d="M${x1.toFixed(1)},${y1.toFixed(1)} A${r2},${r2} 0 ${large} 1 ${x2.toFixed(1)},${y2.toFixed(1)} L${x3.toFixed(1)},${y3.toFixed(1)} A${r1},${r1} 0 ${large} 0 ${x4.toFixed(1)},${y4.toFixed(1)} Z" fill="${color}"/>`;
+  };
+  const arcs = groups.map(g => arc(R-arcW,R,g.a1,g.a2,colors[g.ci])).join('');
+  // Simple chord ribbons (bezier from mid of one group to mid of another)
+  const mid = g => (g.a1+g.a2)/2;
+  const chords = [[0,2],[1,3],[0,4],[2,4],[1,2]].map(([i,j]) => {
+    const a1=mid(groups[i]), a2=mid(groups[j]);
+    const r=R-arcW-2;
+    const x1=(cx+r*Math.cos(a1)).toFixed(1),y1=(cy+r*Math.sin(a1)).toFixed(1);
+    const x2=(cx+r*Math.cos(a2)).toFixed(1),y2=(cy+r*Math.sin(a2)).toFixed(1);
+    return `<path d="M${x1},${y1} Q${cx},${cy} ${x2},${y2}" stroke="${colors[groups[i].ci]}" stroke-width="6" fill="none" stroke-opacity="0.25"/>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${chords}${arcs}</svg>`;
+}
+
+function renderSankeyDiagramSVG(theme) {
+  const W = 560, H = 300;
+  const { c0 } = chartTokens(theme);
+  const c1=theme.palette[1]||c0, c2=theme.palette[2]||c0, c3=theme.palette[3]||c0;
+  const pad = {left:40, right:40, top:20, bottom:20};
+  const cW=W-pad.left-pad.right, cH=H-pad.top-pad.bottom;
+  const nodeW=16, nodeGap=8;
+  // Source nodes (left), target nodes (right)
+  const sources = [{y:.05,h:.35,ci:0},{y:.45,h:.28,ci:1},{y:.78,h:.18,ci:2}];
+  const targets = [{y:.02,h:.22,ci:0},{y:.28,h:.18,ci:1},{y:.50,h:.30,ci:2},{y:.85,h:.12,ci:3}];
+  const colors=[c0,c1,c2,c3];
+  const srcNodes = sources.map(n=>`<rect x="${pad.left}" y="${(pad.top+n.y*cH).toFixed(1)}" width="${nodeW}" height="${(n.h*cH).toFixed(1)}" rx="2" fill="${colors[n.ci]}"/>`).join('');
+  const tgtNodes = targets.map(n=>`<rect x="${(W-pad.right-nodeW).toFixed(1)}" y="${(pad.top+n.y*cH).toFixed(1)}" width="${nodeW}" height="${(n.h*cH).toFixed(1)}" rx="2" fill="${colors[n.ci]}"/>`).join('');
+  // Flows (bezier bands)
+  const flows = [
+    {si:0,ti:0,sh:.0,th:.0,sw:.5,tw:.5},
+    {si:0,ti:2,sh:.5,th:.0,sw:.5,tw:.6},
+    {si:1,ti:1,sh:.0,th:.0,sw:.5,tw:.5},
+    {si:1,ti:2,sh:.5,th:.6,sw:.3,tw:.4},
+    {si:2,ti:3,sh:.0,th:.0,sw:.5,tw:.5},
+  ].map(f => {
+    const s=sources[f.si], t=targets[f.ti];
+    const x1=pad.left+nodeW, y1s=pad.top+(s.y+f.sh*s.h)*cH, y1e=pad.top+(s.y+f.sh*s.h+f.sw*s.h)*cH;
+    const x2=W-pad.right-nodeW, y2s=pad.top+(t.y+f.th*t.h)*cH, y2e=pad.top+(t.y+f.th*t.h+f.tw*t.h)*cH;
+    const mx=(x1+x2)/2;
+    return `<path d="M${x1},${y1s.toFixed(1)} C${mx},${y1s.toFixed(1)} ${mx},${y2s.toFixed(1)} ${x2},${y2s.toFixed(1)} L${x2},${y2e.toFixed(1)} C${mx},${y2e.toFixed(1)} ${mx},${y1e.toFixed(1)} ${x1},${y1e.toFixed(1)} Z" fill="${colors[f.si]}" fill-opacity="0.25"/>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${flows}${srcNodes}${tgtNodes}</svg>`;
+}
+
+function renderNetworkGraphSVG(theme) {
+  const W = 560, H = 300;
+  const { gridColor, c0 } = chartTokens(theme);
+  const c1=theme.palette[1]||c0, c2=theme.palette[2]||c0;
+  const dark = isColorDark(theme.bg);
+  const edgeColor = dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
+  const nodes = [
+    {x:.5,y:.5,r:14,ci:0},{x:.25,y:.3,r:10,ci:1},{x:.75,y:.25,r:11,ci:2},
+    {x:.15,y:.65,r:8,ci:1},{x:.5,y:.82,r:9,ci:0},{x:.82,y:.65,r:10,ci:2},
+    {x:.38,y:.18,r:7,ci:2},{x:.65,y:.48,r:7,ci:1},{x:.30,y:.72,r:6,ci:0},
+    {x:.70,y:.80,r:6,ci:1},{x:.12,y:.40,r:5,ci:2},
+  ];
+  const edges = [[0,1],[0,2],[0,4],[0,5],[1,3],[1,6],[2,6],[2,7],[3,8],[4,8],[4,9],[5,7],[5,9],[7,2],[3,10]];
+  const colors=[c0,c1,c2];
+  const edgeLines = edges.map(([a,b]) => {
+    const na=nodes[a], nb=nodes[b];
+    return `<line x1="${(na.x*W).toFixed(1)}" y1="${(na.y*H).toFixed(1)}" x2="${(nb.x*W).toFixed(1)}" y2="${(nb.y*H).toFixed(1)}" stroke="${edgeColor}" stroke-width="1.5"/>`;
+  }).join('');
+  const nodeDots = nodes.map(n =>
+    `<circle cx="${(n.x*W).toFixed(1)}" cy="${(n.y*H).toFixed(1)}" r="${n.r}" fill="${colors[n.ci]}" fill-opacity="0.85" stroke="${theme.bg}" stroke-width="1.5"/>`
+  ).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${edgeLines}${nodeDots}</svg>`;
+}
+
+function renderWordCloudSVG(theme) {
+  const W = 560, H = 300;
+  const { c0 } = chartTokens(theme);
+  const dark = isColorDark(theme.bg);
+  const words = [
+    {w:'data',x:280,y:150,s:36,ci:0},{w:'analysis',x:420,y:100,s:22,ci:1},{w:'chart',x:150,y:130,s:28,ci:2},
+    {w:'visual',x:100,y:200,s:20,ci:0},{w:'trend',x:360,y:210,s:18,ci:1},{w:'insight',x:460,y:180,s:16,ci:2},
+    {w:'metric',x:200,y:240,s:15,ci:0},{w:'plot',x:310,y:80,s:24,ci:1},{w:'graph',x:180,y:80,s:20,ci:2},
+    {w:'value',x:440,y:245,s:14,ci:0},{w:'compare',x:75,y:255,s:14,ci:1},{w:'flow',x:510,y:130,s:16,ci:2},
+    {w:'map',x:340,y:260,s:15,ci:0},{w:'scale',x:230,y:170,s:13,ci:1},
+  ];
+  const colors=[c0,theme.palette[1]||c0,theme.palette[2]||c0];
+  const font = chartTokens(theme).font;
+  const wds = words.map(w =>
+    `<text x="${w.x}" y="${w.y}" text-anchor="middle" font-size="${w.s}" font-family="${font}" font-weight="${w.s>24?'700':'500'}" fill="${colors[w.ci]}" fill-opacity="0.82">${w.w}</text>`
+  ).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${wds}</svg>`;
+}
+
+function renderPictogramSVG(theme) {
+  const W = 560, H = 300;
+  const { c0, barRadius: r } = chartTokens(theme);
+  const dark = isColorDark(theme.bg);
+  const emptyFill = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+  // 5 rows of 8 person icons (simple circle+body shapes)
+  const cols=8, rows=5, filled=24;
+  const iconW=52, iconH=48, padX=(W-cols*iconW)/2, padY=(H-rows*iconH)/2;
+  const rr = Math.min(r, 8);
+  let icons = '';
+  for (let row=0; row<rows; row++) {
+    for (let col=0; col<cols; col++) {
+      const idx=row*cols+col;
+      const cx=padX+col*iconW+iconW/2, cy=padY+row*iconH+iconH/2;
+      const color = idx<filled ? c0 : emptyFill;
+      const opacity = idx<filled ? '0.85' : '1';
+      // head + body as simple shapes
+      icons += `<circle cx="${cx.toFixed(1)}" cy="${(cy-10).toFixed(1)}" r="7" fill="${color}" fill-opacity="${opacity}"/>`;
+      icons += `<rect x="${(cx-9).toFixed(1)}" y="${(cy-1).toFixed(1)}" width="18" height="14" rx="${rr}" fill="${color}" fill-opacity="${opacity}"/>`;
+    }
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${icons}</svg>`;
+}
+
+function renderProportionalSymbolMapSVG(theme) {
+  const W = 560, H = 300;
+  const { c0 } = chartTokens(theme);
+  const dark = isColorDark(theme.bg);
+  const landFill = dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const borderColor = dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)';
+  // Simplified world map outline (very rough rectangles for continents)
+  const continents = [
+    {x:40,y:60,w:120,h:120,rx:4},{x:210,y:50,w:100,h:140,rx:4},
+    {x:320,y:40,w:180,h:100,rx:4},{x:330,y:160,w:60,h:80,rx:4},
+    {x:80,y:200,w:80,h:70,rx:4},
+  ];
+  const land = continents.map(c => `<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="${c.rx}" fill="${landFill}" stroke="${borderColor}" stroke-width="1"/>`).join('');
+  const symbols = [
+    {x:280,y:120,r:28},{x:190,y:90,r:18},{x:360,y:80,r:22},
+    {x:100,y:110,r:14},{x:360,y:200,r:12},{x:140,y:220,r:10},
+    {x:460,y:90,r:16},{x:230,y:200,r:8},
+  ].map(s => `<circle cx="${s.x}" cy="${s.y}" r="${s.r}" fill="${c0}" fill-opacity="0.45" stroke="${c0}" stroke-width="1.5" stroke-opacity="0.7"/>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${land}${symbols}</svg>`;
+}
+
+function renderChoroplethMapSVG(theme) {
+  const W = 560, H = 300;
+  const { c0 } = chartTokens(theme);
+  const dark = isColorDark(theme.bg);
+  const borderColor = dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
+  // Rough grid of regions at varying opacities
+  const regions = [
+    {x:30,y:20,w:110,h:90,v:.8},{x:145,y:20,w:90,h:90,v:.3},{x:240,y:20,w:130,h:90,v:.95},
+    {x:375,y:20,w:80,h:90,v:.5},{x:460,y:20,w:80,h:90,v:.15},
+    {x:30,y:115,w:80,h:85,v:.6},{x:115,y:115,w:120,h:85,v:.45},{x:240,y:115,w:100,h:85,v:.75},
+    {x:345,y:115,w:110,h:85,v:.2},{x:460,y:115,w:80,h:85,v:.88},
+    {x:30,y:205,w:130,h:75,v:.35},{x:165,y:205,w:90,h:75,v:.65},{x:260,y:205,w:120,h:75,v:.50},
+    {x:385,y:205,w:80,h:75,v:.9},{x:470,y:205,w:70,h:75,v:.25},
+  ];
+  const cells = regions.map(r =>
+    `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="2" fill="${c0}" fill-opacity="${(0.08+r.v*0.82).toFixed(2)}" stroke="${borderColor}" stroke-width="1.5"/>`
+  ).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${cells}</svg>`;
+}
+
+function renderGaugeChartSVG(theme) {
+  const W = 560, H = 300;
+  const cx = W/2, cy = H*0.72;
+  const R = Math.min(cx, cy*1.1) - 20;
+  const { textColor, baseColor, font, c0 } = chartTokens(theme);
+  const dark = isColorDark(theme.bg);
+  const trackColor = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
+  const value = 0.68; // 68%
+  const startA = Math.PI, endA = 2*Math.PI; // semicircle
+  const sweepA = startA + value * Math.PI;
+  const arcPath = (r, a1, a2) => {
+    const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+    const x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+    const large = a2-a1 > Math.PI ? 1 : 0;
+    return `M${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${large} 1 ${x2.toFixed(1)},${y2.toFixed(1)}`;
+  };
+  const sw = R*0.18;
+  const track = `<path d="${arcPath(R, Math.PI, 2*Math.PI)}" stroke="${trackColor}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>`;
+  const fill  = `<path d="${arcPath(R, Math.PI, sweepA)}" stroke="${c0}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>`;
+  const needleA = Math.PI + value*Math.PI;
+  const nx = cx + (R*0.72)*Math.cos(needleA), ny = cy + (R*0.72)*Math.sin(needleA);
+  const needle = `<line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${textColor}" stroke-width="2.5" stroke-linecap="round"/>`;
+  const hub = `<circle cx="${cx}" cy="${cy}" r="5" fill="${textColor}"/>`;
+  const label = `<text x="${cx}" y="${(cy-R*0.25).toFixed(1)}" text-anchor="middle" font-size="28" font-weight="700" font-family="${font}" fill="${textColor}">68%</text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${track}${fill}${needle}${hub}${label}</svg>`;
+}
+
+function renderGanttChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 20, right: 20, bottom: 30, left: 90 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, font, c0, barRadius: r, axisLabels } = chartTokens(theme);
+  const c1=theme.palette[1]||c0, c2=theme.palette[2]||c0;
+  const tasks = [
+    {l:'Planning',  start:.02,end:.22,ci:0},{l:'Design',    start:.18,end:.42,ci:1},
+    {l:'Dev Phase 1',start:.30,end:.60,ci:0},{l:'Testing',  start:.55,end:.75,ci:2},
+    {l:'Dev Phase 2',start:.50,end:.82,ci:0},{l:'Launch',   start:.78,end:.96,ci:1},
+  ];
+  const colors=[c0,c1,c2];
+  const rowH = cH/tasks.length;
+  const bH = Math.round(rowH*0.45);
+  const rr = Math.min(r, 4);
+  const grid = [0,.25,.5,.75,1].map(t => {
+    const x = (pad.left+t*cW).toFixed(1);
+    return `<line x1="${x}" y1="${pad.top}" x2="${x}" y2="${pad.top+cH}" stroke="${gridColor}" stroke-width="1"/>` +
+      (axisLabels ? `<text x="${x}" y="${(pad.top+cH+16).toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">Q${Math.round(t*4)+1}</text>` : '');
+  }).join('');
+  const bars = tasks.map((t,i) => {
+    const cy = pad.top + rowH*i + rowH/2;
+    const x = pad.left + t.start*cW, w = (t.end-t.start)*cW, y = cy - bH/2;
+    const lbl = axisLabels ? `<text x="${pad.left-6}" y="${(cy+4).toFixed(1)}" text-anchor="end" font-size="10" font-family="${font}" fill="${textColor}">${t.l}</text>` : '';
+    return lbl + `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${bH}" rx="${rr}" fill="${colors[t.ci]}" fill-opacity="0.85"/>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${grid}${bars}</svg>`;
+}
+
+function renderCandlestickChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 16, right: 16, bottom: 36, left: 44 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, baseColor, font, c0, axisLabels, gridDash } = chartTokens(theme);
+  const dark = isColorDark(theme.bg);
+  const bullColor = c0;
+  const bearColor = theme.palette[2] || theme.palette[1] || '#EF4444';
+  const candles = [
+    {o:.45,h:.58,l:.38,c:.54,bull:true},{o:.54,h:.62,l:.48,c:.60,bull:true},
+    {o:.60,h:.65,l:.52,c:.55,bull:false},{o:.55,h:.60,l:.44,c:.48,bull:false},
+    {o:.48,h:.55,l:.42,c:.52,bull:true},{o:.52,h:.68,l:.50,c:.65,bull:true},
+    {o:.65,h:.72,l:.58,c:.70,bull:true},{o:.70,h:.74,l:.60,c:.62,bull:false},
+  ];
+  const slot = cW/candles.length, bW = Math.round(slot*0.55);
+  const yP = v => pad.top + (1-v)*cH;
+  const { ticks } = niceScale(1, 4);
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const grid = [0,.25,.5,.75,1].map(t => {
+    const y = yP(t).toFixed(1);
+    return `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="${gridColor}" stroke-width="1"${dash}/>`;
+  }).join('');
+  const cs = candles.map((c,i) => {
+    const cx2 = pad.left + slot*i + slot/2;
+    const x = cx2 - bW/2;
+    const yO=yP(c.o), yC=yP(c.c), yH=yP(c.h), yL=yP(c.l);
+    const bodyY = Math.min(yO,yC), bodyH = Math.abs(yO-yC);
+    const color = c.bull ? bullColor : bearColor;
+    const lbl = axisLabels && i%2===0 ? `<text x="${cx2.toFixed(1)}" y="${(pad.top+cH+16).toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">W${i+1}</text>` : '';
+    return `<line x1="${cx2.toFixed(1)}" y1="${yH.toFixed(1)}" x2="${cx2.toFixed(1)}" y2="${yL.toFixed(1)}" stroke="${color}" stroke-width="1.5"/>` +
+      `<rect x="${x.toFixed(1)}" y="${bodyY.toFixed(1)}" width="${bW}" height="${Math.max(1,bodyH).toFixed(1)}" fill="${color}"/>` + lbl;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${grid}${cs}</svg>`;
+}
+
+function renderErrorBarChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 20, right: 16, bottom: 36, left: 44 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, baseColor, font, c0, barRadius: r, gridDash, axisLabels } = chartTokens(theme);
+  const data = [{l:'A',v:.62,e:.12},{l:'B',v:.45,e:.08},{l:'C',v:.78,e:.15},{l:'D',v:.38,e:.10},{l:'E',v:.55,e:.09}];
+  const slot = cW/data.length, bW = Math.round(slot*0.45);
+  const yP = v => pad.top + (1-v)*cH;
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const grid = [0,.25,.5,.75,1].map(t => {
+    const y = yP(t).toFixed(1);
+    return `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="${gridColor}" stroke-width="1"${dash}/>` +
+      (axisLabels ? `<text x="${pad.left-6}" y="${(+y+4).toFixed(1)}" text-anchor="end" font-size="10" font-family="${font}" fill="${textColor}">${Math.round(t*100)}</text>` : '');
+  }).join('');
+  const bars = data.map((d,i) => {
+    const cx2 = pad.left + slot*i + slot/2;
+    const x = cx2 - bW/2;
+    const yTop = yP(d.v), h = d.v*cH;
+    const bar = r===0||h<=r
+      ? `<rect x="${x.toFixed(1)}" y="${yTop.toFixed(1)}" width="${bW}" height="${h.toFixed(1)}" fill="${c0}" fill-opacity="0.75"/>`
+      : `<path d="M${x.toFixed(1)},${(yTop+h).toFixed(1)} L${x.toFixed(1)},${(yTop+r).toFixed(1)} Q${x.toFixed(1)},${yTop.toFixed(1)} ${(x+r).toFixed(1)},${yTop.toFixed(1)} L${(x+bW-r).toFixed(1)},${yTop.toFixed(1)} Q${(x+bW).toFixed(1)},${yTop.toFixed(1)} ${(x+bW).toFixed(1)},${(yTop+r).toFixed(1)} L${(x+bW).toFixed(1)},${(yTop+h).toFixed(1)} Z" fill="${c0}" fill-opacity="0.75"/>`;
+    const eH = d.e*cH;
+    const errBar = `<line x1="${cx2.toFixed(1)}" y1="${(yTop-eH).toFixed(1)}" x2="${cx2.toFixed(1)}" y2="${(yTop+eH).toFixed(1)}" stroke="${c0}" stroke-width="2"/>` +
+      `<line x1="${(cx2-bW*0.2).toFixed(1)}" y1="${(yTop-eH).toFixed(1)}" x2="${(cx2+bW*0.2).toFixed(1)}" y2="${(yTop-eH).toFixed(1)}" stroke="${c0}" stroke-width="1.5"/>` +
+      `<line x1="${(cx2-bW*0.2).toFixed(1)}" y1="${(yTop+eH).toFixed(1)}" x2="${(cx2+bW*0.2).toFixed(1)}" y2="${(yTop+eH).toFixed(1)}" stroke="${c0}" stroke-width="1.5"/>`;
+    const lbl = axisLabels ? `<text x="${cx2.toFixed(1)}" y="${(pad.top+cH+16).toFixed(1)}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${d.l}</text>` : '';
+    return bar + errBar + lbl;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${grid}${bars}</svg>`;
+}
+
+function renderMarimekkoChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 20, right: 16, bottom: 30, left: 16 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, font, c0, barRadius: r } = chartTokens(theme);
+  const c1=theme.palette[1]||c0, c2=theme.palette[2]||c0;
+  // Each col has a width (market share) and 3 segments (proportional height)
+  const cols = [
+    {w:.30, segs:[.55,.30,.15]},
+    {w:.25, segs:[.35,.40,.25]},
+    {w:.28, segs:[.45,.25,.30]},
+    {w:.17, segs:[.60,.20,.20]},
+  ];
+  const labels = ['Alpha','Beta','Gamma','Delta'];
+  const colors = [c0,c1,c2];
+  const rr = Math.min(r, 4);
+  let xOff = pad.left;
+  const bars = cols.map((col,ci) => {
+    const bW = col.w*cW - 2;
+    let yOff = pad.top;
+    const segs = col.segs.map((s,si) => {
+      const h = s*cH;
+      const isTop = si === 0;
+      const segEl = isTop && rr > 0
+        ? `<path d="M${xOff.toFixed(1)},${(yOff+h).toFixed(1)} L${xOff.toFixed(1)},${(yOff+rr).toFixed(1)} Q${xOff.toFixed(1)},${yOff.toFixed(1)} ${(xOff+rr).toFixed(1)},${yOff.toFixed(1)} L${(xOff+bW-rr).toFixed(1)},${yOff.toFixed(1)} Q${(xOff+bW).toFixed(1)},${yOff.toFixed(1)} ${(xOff+bW).toFixed(1)},${(yOff+rr).toFixed(1)} L${(xOff+bW).toFixed(1)},${(yOff+h).toFixed(1)} Z" fill="${colors[si]}" fill-opacity="0.85"/>`
+        : `<rect x="${xOff.toFixed(1)}" y="${yOff.toFixed(1)}" width="${bW.toFixed(1)}" height="${h.toFixed(1)}" fill="${colors[si]}" fill-opacity="0.85"/>`;
+      yOff += h;
+      return segEl;
+    }).join('');
+    const lbl = `<text x="${(xOff+bW/2).toFixed(1)}" y="${(pad.top+cH+16).toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${labels[ci]}</text>`;
+    xOff += col.w*cW;
+    return segs + lbl;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${bars}</svg>`;
+}
+
+function renderSpanChartSVG(theme) {
+  const W = 560, H = 300;
+  const pad = { top: 16, right: 24, bottom: 16, left: 80 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  const { textColor, gridColor, font, c0, barRadius: r, gridDash, axisLabels } = chartTokens(theme);
+  const c1=theme.palette[1]||c0;
+  const rows = [
+    {l:'Product A',lo:.15,hi:.72,ci:0},{l:'Product B',lo:.30,hi:.85,ci:1},
+    {l:'Product C',lo:.08,hi:.55,ci:0},{l:'Product D',lo:.45,hi:.90,ci:1},
+    {l:'Product E',lo:.22,hi:.68,ci:0},
+  ];
+  const rowH = cH/rows.length, bH = Math.round(rowH*0.35);
+  const colors=[c0,c1];
+  const rr = Math.min(r, 4);
+  const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+  const vLines = [0,.25,.5,.75,1].map(t =>
+    `<line x1="${(pad.left+t*cW).toFixed(1)}" y1="${pad.top}" x2="${(pad.left+t*cW).toFixed(1)}" y2="${pad.top+cH}" stroke="${gridColor}" stroke-width="1"${dash}/>`
+  ).join('');
+  const bars = rows.map((row,i) => {
+    const cy = pad.top + rowH*i + rowH/2;
+    const x = pad.left + row.lo*cW, w = (row.hi-row.lo)*cW, y = cy - bH/2;
+    const lbl = axisLabels ? `<text x="${pad.left-8}" y="${(cy+4).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">${row.l}</text>` : '';
+    return lbl +
+      `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${bH}" rx="${rr}" fill="${colors[row.ci]}" fill-opacity="0.75"/>` +
+      `<circle cx="${x.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="${colors[row.ci]}" stroke="${theme.bg}" stroke-width="1.5"/>` +
+      `<circle cx="${(x+w).toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="${colors[row.ci]}" stroke="${theme.bg}" stroke-width="1.5"/>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${vLines}${bars}</svg>`;
+}
+
 const CUSTOM_RENDERERS = {
-  'bar-chart':         renderBarChartSVG,
-  'line-chart':        renderLineChartSVG,
-  'scatter-plot':      renderScatterChartSVG,
-  'area-chart':        renderAreaChartSVG,
-  'pie-chart':         renderPieChartSVG,
-  'donut-chart':       renderDonutChartSVG,
-  'grouped-bar-chart': renderGroupedBarChartSVG,
-  'data-table':        renderTableChartSVG,
+  'bar-chart':              renderBarChartSVG,
+  'line-chart':             renderLineChartSVG,
+  'scatter-plot':           renderScatterChartSVG,
+  'area-chart':             renderAreaChartSVG,
+  'pie-chart':              renderPieChartSVG,
+  'donut-chart':            renderDonutChartSVG,
+  'grouped-bar-chart':      renderGroupedBarChartSVG,
+  'data-table':             renderTableChartSVG,
+  'histogram':              renderHistogramSVG,
+  'stacked-bar-chart':      renderStackedBarChartSVG,
+  'stacked-bar-100':        renderStackedBar100SVG,
+  'waterfall-chart':        renderWaterfallChartSVG,
+  'bullet-chart':           renderBulletChartSVG,
+  'funnel-chart':           renderFunnelChartSVG,
+  'lollipop-chart':         renderLollipopChartSVG,
+  'dumbbell-chart':         renderDumbbellChartSVG,
+  'bubble-chart':           renderBubbleChartSVG,
+  'dot-plot':               renderDotPlotSVG,
+  'strip-plot':             renderStripPlotSVG,
+  'sparkline':              renderSparklineSVG,
+  'step-chart':             renderStepChartSVG,
+  'slope-chart':            renderSlopeChartSVG,
+  'bump-chart':             renderBumpChartSVG,
+  'stacked-area-chart':     renderStackedAreaChartSVG,
+  'streamgraph':            renderStreamgraphSVG,
+  'connected-scatter-plot': renderConnectedScatterSVG,
+  'box-plot':               renderBoxPlotSVG,
+  'violin-plot':            renderViolinPlotSVG,
+  'density-plot':           renderDensityPlotSVG,
+  'ridge-plot':             renderRidgePlotSVG,
+  'parallel-coordinates':   renderParallelCoordsSVG,
+  'waffle-chart':           renderWaffleChartSVG,
+  'heatmap':                renderHeatmapSVG,
+  'calendar-heatmap':       renderCalendarHeatmapSVG,
+  'beeswarm-plot':          renderBeeswarmPlotSVG,
+  'radar-chart':            renderRadarChartSVG,
+  'treemap':                renderTreemapSVG,
+  'sunburst-chart':         renderSunburstChartSVG,
+  'chord-diagram':          renderChordDiagramSVG,
+  'sankey-diagram':         renderSankeyDiagramSVG,
+  'network-graph':          renderNetworkGraphSVG,
+  'word-cloud':             renderWordCloudSVG,
+  'pictogram':              renderPictogramSVG,
+  'proportional-symbol-map': renderProportionalSymbolMapSVG,
+  'choropleth-map':         renderChoroplethMapSVG,
+  'gauge-chart':            renderGaugeChartSVG,
+  'gantt-chart':            renderGanttChartSVG,
+  'candlestick-chart':      renderCandlestickChartSVG,
+  'error-bar-chart':        renderErrorBarChartSVG,
+  'marimekko-chart':        renderMarimekkoChartSVG,
+  'span-chart':             renderSpanChartSVG,
 };
 
 function renderCustomChart(vizId, container, theme) {
