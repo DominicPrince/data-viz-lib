@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bar Chart Builder — data-viz-lib</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@600;700&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="builder-page">
+
+  <header class="builder-header">
+    <a href="index.html" class="builder-back">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Library
+    </a>
+    <span class="builder-header-title">Bar Chart Builder</span>
+    <span></span>
+  </header>
+
+  <div class="builder-layout">
+
+    <!-- ── Config panel ──────────────────────────────────── -->
+    <aside class="builder-config">
+
+      <div class="config-section">
+        <div class="config-section-header">Data</div>
+        <div id="builder-data-display"></div>
+      </div>
+
+      <div class="config-section">
+        <div class="config-section-header">Metadata</div>
+        <div class="config-field">
+          <label>Title</label>
+          <input type="text" id="b-title" placeholder="Chart title" />
+        </div>
+        <div class="config-field">
+          <label>Subtitle</label>
+          <input type="text" id="b-subtitle" placeholder="A brief description" />
+        </div>
+        <div class="config-field">
+          <label>Source</label>
+          <input type="text" id="b-source" placeholder="Data: Source name, 2024" />
+        </div>
+        <div class="config-field">
+          <label>Logo</label>
+          <label class="logo-upload-btn" for="b-logo-input">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 9V3M4.5 5.5L7 3l2.5 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 11v.5a.5.5 0 00.5.5h9a.5.5 0 00.5-.5V11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+            Upload PNG
+          </label>
+          <input type="file" id="b-logo-input" accept="image/*" hidden />
+          <span class="b-logo-name" id="b-logo-name" hidden></span>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <div class="config-section-header">Axes</div>
+        <div class="config-field">
+          <label>X-axis label</label>
+          <input type="text" id="b-xlabel" placeholder="Category" />
+        </div>
+        <div class="config-field">
+          <label>Y-axis label</label>
+          <input type="text" id="b-ylabel" placeholder="Value" />
+        </div>
+      </div>
+
+      <div class="config-section">
+        <div class="config-section-header">Appearance</div>
+        <div class="config-field">
+          <label>Theme</label>
+          <select id="b-theme">
+            <option value="default">Default</option>
+            <option value="bold">Bold</option>
+            <option value="earth">Earth</option>
+            <option value="dark">Dark</option>
+            <option value="journeys">Journeys</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label>Style</label>
+          <select id="b-style">
+            <option value="modern">Modern</option>
+            <option value="minimal">Minimal</option>
+            <option value="classic">Classic</option>
+            <option value="neon">Neon</option>
+            <option value="editorial">Editorial</option>
+            <option value="journeys">Journeys</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <div class="config-section-header">Export</div>
+        <div class="export-btns">
+          <button class="export-btn" id="b-copy-svg">Copy SVG</button>
+          <button class="export-btn" id="b-dl-svg">Download SVG</button>
+          <button class="export-btn" id="b-dl-png">Download PNG</button>
+          <button class="export-btn" id="b-copy-embed">Copy Embed</button>
+        </div>
+        <div class="export-feedback" id="export-feedback"></div>
+      </div>
+
+    </aside>
+
+    <!-- ── Live preview ───────────────────────────────────── -->
+    <div class="builder-preview">
+      <div class="builder-preview-inner" id="builder-preview"></div>
+    </div>
+
+  </div>
+
+  <script>
+  /* ─────────────────────────────────────────────────────────
+     Self-contained helpers (copied from app.js)
+  ───────────────────────────────────────────────────────── */
+
+  const PRESETS = {
+    default:  { bg:'#ffffff', palette:['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899'], font:'Inter' },
+    bold:     { bg:'#fff7f7', palette:['#EF4444','#F97316','#FBBF24','#84CC16','#06B6D4','#8B5CF6'], font:'Inter' },
+    earth:    { bg:'#faf7f2', palette:['#92400E','#B45309','#D97706','#65A30D','#047857','#6B7280'], font:"'Georgia', serif" },
+    dark:     { bg:'#111111', palette:['#CCCCCC','#999999','#666666','#444444','#EEEEEE','#222222'], font:'Inter' },
+    journeys: { bg:'#F0F7FC', palette:['#29ABE2','#26C6A0','#F44336','#E91E8C','#7B3FC4','#5C2D91'], font:"'Inter', sans-serif" },
+  };
+
+  const CHART_STYLES = {
+    modern:    { barRadius:5,  gridScale:1,  gridDash:'',    strokeW:2.5, fontOverride:null,                         glow:false, axisLabels:true  },
+    minimal:   { barRadius:2,  gridScale:0,  gridDash:'',    strokeW:1.5, fontOverride:null,                         glow:false, axisLabels:false },
+    classic:   { barRadius:0,  gridScale:3,  gridDash:'',    strokeW:1.5, fontOverride:'Georgia, serif',             glow:false, axisLabels:true  },
+    neon:      { barRadius:1,  gridScale:1,  gridDash:'3 3', strokeW:2,   fontOverride:'"Courier New", monospace',   glow:true,  axisLabels:true  },
+    editorial: { barRadius:0,  gridScale:5,  gridDash:'',    strokeW:3,   fontOverride:null,                         glow:false, axisLabels:true  },
+    journeys:  { barRadius:12, gridScale:0,  gridDash:'',    strokeW:2.5, fontOverride:"'Inter', sans-serif",        glow:false, axisLabels:true  },
+  };
+
+  function isColorDark(hex) {
+    const c = hex.replace('#','');
+    if (c.length < 6) return false;
+    const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
+    return (0.299*r + 0.587*g + 0.114*b) < 128;
+  }
+
+  function niceScale(maxVal, tickCount = 4) {
+    const rawStep = (maxVal * 1.2) / tickCount;
+    const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const norm = rawStep / mag;
+    const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+    const max = Math.ceil((maxVal * 1.2) / step) * step;
+    const ticks = [];
+    for (let v = 0; v <= max + step * 0.001; v += step) ticks.push(Math.round(v));
+    return { max, ticks };
+  }
+
+  function fmtTick(v) {
+    if (v >= 1e6) return (v / 1e6) + 'M';
+    if (v >= 1e3) return (v / 1e3) + 'K';
+    return String(v);
+  }
+
+  function chartTokens(theme, chartStyle) {
+    const dark = isColorDark(theme.bg);
+    const sty = CHART_STYLES[chartStyle] || CHART_STYLES.modern;
+    const ch = dark ? '255,255,255' : '0,0,0';
+    const gridOpacity = Math.min(0.9, (dark ? 0.06 : 0.05) * sty.gridScale).toFixed(3);
+    return {
+      textColor:  dark ? 'rgba(255,255,255,0.4)'  : 'rgba(0,0,0,0.32)',
+      gridColor:  `rgba(${ch},${gridOpacity})`,
+      baseColor:  dark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.10)',
+      font:       sty.fontOverride || ((theme.font || 'Inter') + ', sans-serif'),
+      c0:         theme.palette[0],
+      barRadius:  sty.barRadius,
+      gridDash:   sty.gridDash,
+      glow:       sty.glow,
+      axisLabels: sty.axisLabels,
+    };
+  }
+
+  /* Returns inner SVG content only (no wrapping <svg> or background rect) */
+  function renderBarChartInner(theme, data, chartStyle) {
+    const W = 560, H = 300;
+    const pad = { top: 16, right: 16, bottom: 40, left: 50 };
+    const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+    const { textColor, gridColor, baseColor, font, c0, barRadius, gridDash, glow, axisLabels } = chartTokens(theme, chartStyle);
+
+    const { max, ticks } = niceScale(Math.max(...data.map(d => d.v)));
+    const slot = cW / data.length;
+    const bW = Math.round(slot * 0.52);
+    const xMid = i => pad.left + slot * i + slot / 2;
+    const yV   = v => pad.top + cH - (v / max) * cH;
+    const r = barRadius;
+    const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+
+    const grid = ticks.map(t => {
+      const y = yV(t).toFixed(1);
+      const lbl = axisLabels
+        ? `<text x="${pad.left - 8}" y="${(+y + 4).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">${fmtTick(t)}</text>`
+        : '';
+      return `<line x1="${pad.left}" y1="${y}" x2="${W - pad.right}" y2="${y}" stroke="${t === 0 ? baseColor : gridColor}" stroke-width="1"${dash}/>${lbl}`;
+    }).join('');
+
+    const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
+    const filterDef = glow
+      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
+      : '';
+
+    const bars = data.map((d, i) => {
+      const x = xMid(i) - bW / 2, y = yV(d.v), h = (d.v / max) * cH;
+      const bar = r === 0 || h <= r
+        ? `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${h.toFixed(1)}" fill="${c0}"/>`
+        : `<path d="M${x.toFixed(1)},${(y+h).toFixed(1)} L${x.toFixed(1)},${(y+r).toFixed(1)} Q${x.toFixed(1)},${y.toFixed(1)} ${(x+r).toFixed(1)},${y.toFixed(1)} L${(x+bW-r).toFixed(1)},${y.toFixed(1)} Q${(x+bW).toFixed(1)},${y.toFixed(1)} ${(x+bW).toFixed(1)},${(y+r).toFixed(1)} L${(x+bW).toFixed(1)},${(y+h).toFixed(1)} Z" fill="${c0}"/>`;
+      const lbl = axisLabels
+        ? `<text x="${xMid(i).toFixed(1)}" y="${(pad.top + cH + 16).toFixed(1)}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(d.l)}</text>`
+        : '';
+      return bar + lbl;
+    }).join('');
+
+    const glowAttr = glow ? ` filter="url(#${fid})"` : '';
+    return (filterDef ? `<defs>${filterDef}</defs>` : '') + `${grid}<g${glowAttr}>${bars}</g>`;
+  }
+
+  function escSVG(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* Wraps chart inner content with title / subtitle / source / logo */
+  function composeSVG(innerContent, state) {
+    const W = 560, chartH = 300;
+    const { theme, options, chartStyle } = state;
+    const { title, subtitle, source, logoDataUrl } = options;
+
+    let topPad = 0, bottomPad = 0;
+    if (title)               topPad    += 40;
+    if (subtitle)            topPad    += 24;
+    if (source || logoDataUrl) bottomPad += 44;
+
+    const totalH = chartH + topPad + bottomPad;
+    const dark = isColorDark(theme.bg);
+    const textColor  = dark ? 'rgba(255,255,255,0.85)' : '#1A1816';
+    const mutedColor = dark ? 'rgba(255,255,255,0.45)' : '#767676';
+    const tok = chartTokens(theme, chartStyle);
+    const font = tok.font;
+
+    let out = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${totalH}">`;
+    out += `<rect width="${W}" height="${totalH}" fill="${theme.bg}"/>`;
+
+    let ty = 0;
+    if (title) {
+      out += `<text x="24" y="${ty + 30}" font-size="18" font-weight="700" font-family="${font}" fill="${textColor}">${escSVG(title)}</text>`;
+      ty += 40;
+    }
+    if (subtitle) {
+      out += `<text x="24" y="${ty + 16}" font-size="13" font-family="${font}" fill="${mutedColor}">${escSVG(subtitle)}</text>`;
+      ty += 24;
+    }
+
+    out += `<g transform="translate(0,${topPad})">${innerContent}</g>`;
+
+    if (source) {
+      out += `<text x="24" y="${topPad + chartH + 28}" font-size="11" font-family="${font}" fill="${mutedColor}">${escSVG('Source: ' + source)}</text>`;
+    }
+    if (logoDataUrl) {
+      out += `<image href="${logoDataUrl}" x="${W - 72}" y="${topPad + chartH + 8}" width="60" height="28" preserveAspectRatio="xMidYMid meet"/>`;
+    }
+
+    out += '</svg>';
+    return out;
+  }
+
+  /* ─────────────────────────────────────────────────────────
+     Builder state
+  ───────────────────────────────────────────────────────── */
+
+  const saved = sessionStorage.getItem('builderState');
+  if (!saved) { window.location.href = 'index.html'; }
+
+  const loaded = JSON.parse(saved);
+  const bState = {
+    data:       loaded.data       || [],
+    theme:      loaded.theme      || PRESETS.default,
+    chartStyle: loaded.chartStyle || 'modern',
+    options: { title: '', subtitle: '', source: '', logoDataUrl: null },
+  };
+
+  let currentSVG = '';
+
+  function rerender() {
+    const inner = renderBarChartInner(bState.theme, bState.data, bState.chartStyle);
+    currentSVG = composeSVG(inner, bState);
+    document.getElementById('builder-preview').innerHTML = currentSVG;
+  }
+
+  /* ─────────────────────────────────────────────────────────
+     Init
+  ───────────────────────────────────────────────────────── */
+
+  // Match preset by bg colour (best-effort)
+  const themeKey = Object.keys(PRESETS).find(k => PRESETS[k].bg === bState.theme.bg) || 'default';
+  document.getElementById('b-theme').value = themeKey;
+  document.getElementById('b-style').value = bState.chartStyle;
+
+  // Data summary
+  (function populateDataDisplay() {
+    const el = document.getElementById('builder-data-display');
+    const rows = bState.data;
+    const preview = rows.slice(0, 6);
+    const more = rows.length - preview.length;
+    el.innerHTML =
+      `<p class="builder-data-summary">${rows.length} row${rows.length !== 1 ? 's' : ''} loaded</p>` +
+      `<div class="builder-data-rows-list">${
+        preview.map(r => `<span class="builder-data-row"><span>${escSVG(r.l)}</span><span>${r.v}</span></span>`).join('')
+      }${more > 0 ? `<span class="builder-data-more">+${more} more</span>` : ''}</div>` +
+      `<button class="builder-back-link" onclick="history.back()">← Edit data</button>`;
+  })();
+
+  rerender();
+
+  /* ─────────────────────────────────────────────────────────
+     Config wiring
+  ───────────────────────────────────────────────────────── */
+
+  document.getElementById('b-title').addEventListener('input', e => { bState.options.title = e.target.value; rerender(); });
+  document.getElementById('b-subtitle').addEventListener('input', e => { bState.options.subtitle = e.target.value; rerender(); });
+  document.getElementById('b-source').addEventListener('input', e => { bState.options.source = e.target.value; rerender(); });
+  document.getElementById('b-xlabel').addEventListener('input', rerender);
+  document.getElementById('b-ylabel').addEventListener('input', rerender);
+
+  document.getElementById('b-theme').addEventListener('change', e => {
+    bState.theme = PRESETS[e.target.value] || PRESETS.default;
+    rerender();
+  });
+  document.getElementById('b-style').addEventListener('change', e => {
+    bState.chartStyle = e.target.value;
+    rerender();
+  });
+
+  document.getElementById('b-logo-input').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    const nameEl = document.getElementById('b-logo-name');
+    nameEl.textContent = file.name; nameEl.hidden = false;
+    const reader = new FileReader();
+    reader.onload = ev => { bState.options.logoDataUrl = ev.target.result; rerender(); };
+    reader.readAsDataURL(file);
+  });
+
+  /* ─────────────────────────────────────────────────────────
+     Export
+  ───────────────────────────────────────────────────────── */
+
+  function showFeedback(msg) {
+    const el = document.getElementById('export-feedback');
+    el.textContent = msg;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.textContent = ''; }, 2200);
+  }
+
+  document.getElementById('b-copy-svg').addEventListener('click', () => {
+    navigator.clipboard.writeText(currentSVG)
+      .then(() => showFeedback('SVG copied to clipboard'))
+      .catch(() => showFeedback('Copy failed — try Download SVG'));
+  });
+
+  document.getElementById('b-dl-svg').addEventListener('click', () => {
+    const blob = new Blob([currentSVG], { type: 'image/svg+xml' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'chart.svg';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  document.getElementById('b-dl-png').addEventListener('click', () => {
+    const blob = new Blob([currentSVG], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const m = currentSVG.match(/viewBox="0 0 \d+ (\d+)"/);
+      const h = m ? parseInt(m[1]) : 300;
+      const scale = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = 560 * scale;
+      canvas.height = h * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = 'chart.png';
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  });
+
+  document.getElementById('b-copy-embed').addEventListener('click', () => {
+    const b64 = btoa(unescape(encodeURIComponent(currentSVG)));
+    const snippet = `<img src="data:image/svg+xml;base64,${b64}" alt="Chart" style="max-width:100%">`;
+    navigator.clipboard.writeText(snippet)
+      .then(() => showFeedback('Embed snippet copied'))
+      .catch(() => showFeedback('Copy failed'));
+  });
+
+  </script>
+</body>
+</html>

@@ -1167,7 +1167,7 @@ const CHART_RECOMMENDATIONS = {
 /* ── Load catalog ────────────────────────────────────────────────────────── */
 async function loadCatalog() {
   showSkeletons();
-  const res = await fetch('data/catalog.json?v=40');
+  const res = await fetch('data/catalog.json?v=41');
   state.catalog = await res.json();
 
   state.fuse = new Fuse(state.catalog, {
@@ -1661,13 +1661,13 @@ function chartTokens(theme) {
   };
 }
 
-function renderBarChartSVG(theme) {
+function renderBarChartSVG(theme, inputData, options) {
   const W = 560, H = 300;
   const pad = { top: 16, right: 16, bottom: 40, left: 50 };
   const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
   const { textColor, gridColor, baseColor, font, c0, barRadius, gridDash, axisLabels, glow } = chartTokens(theme);
 
-  const data = [
+  const data = (inputData && inputData.length) ? inputData : [
     {l:'Apples',v:85},{l:'Oranges',v:62},{l:'Bananas',v:108},
     {l:'Grapes',v:44},{l:'Mangoes',v:77},{l:'Peaches',v:93},
   ];
@@ -3394,12 +3394,154 @@ function renderCustomChart(vizId, container, theme) {
   return true;
 }
 
+/* ── Build tab ───────────────────────────────────────────────────────────── */
+let currentBuildData = [];
+let buildListenersReady = false;
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  if (!lines.length) return [];
+  const rows = lines.map(l => l.split(',').map(s => s.trim()));
+  const hasHeader = isNaN(parseFloat(rows[0]?.[1]));
+  const dataRows = hasHeader ? rows.slice(1) : rows;
+  return dataRows
+    .map(r => ({ l: r[0] || '', v: parseFloat(r[1]) }))
+    .filter(r => r.l && !isNaN(r.v));
+}
+
+function onBuildDataChange(rows) {
+  currentBuildData = rows;
+  const btn = document.getElementById('build-chart-btn');
+  if (btn) btn.disabled = rows.length < 2;
+  const preview = document.getElementById('build-tab-preview');
+  if (preview) preview.innerHTML = rows.length >= 2 ? renderBarChartSVG(state.theme, rows) : '';
+}
+
+function addManualRow(tbody, label, value) {
+  const tr = document.createElement('tr');
+  const lv = label !== undefined ? String(label).replace(/"/g, '&quot;') : '';
+  const vv = value !== undefined ? value : '';
+  tr.innerHTML = `<td><input class="manual-cell" type="text" placeholder="Label" value="${lv}"/></td><td><input class="manual-cell manual-cell--num" type="number" placeholder="0" value="${vv}"/></td><td><button class="manual-del-btn" aria-label="Remove row">×</button></td>`;
+  tr.querySelector('.manual-del-btn').addEventListener('click', () => { tr.remove(); syncManualData(); });
+  tr.querySelectorAll('.manual-cell').forEach(inp => inp.addEventListener('input', syncManualData));
+  tbody.appendChild(tr);
+}
+
+function syncManualData() {
+  const rows = [...document.querySelectorAll('#manual-table tbody tr')].map(tr => {
+    const cells = tr.querySelectorAll('.manual-cell');
+    return { l: cells[0].value.trim(), v: parseFloat(cells[1].value) };
+  }).filter(r => r.l && !isNaN(r.v));
+  onBuildDataChange(rows);
+}
+
+function initBuildTab() {
+  // Reset UI state
+  currentBuildData = [];
+  const preview = document.getElementById('build-tab-preview');
+  if (preview) preview.innerHTML = '';
+  const btn = document.getElementById('build-chart-btn');
+  if (btn) btn.disabled = true;
+
+  // Reset to Paste tab
+  document.querySelectorAll('.data-tab').forEach(t => t.classList.toggle('active', t.dataset.input === 'paste'));
+  $('input-paste').hidden = false;
+  $('input-upload').hidden = true;
+  $('input-manual').hidden = true;
+
+  const csvPaste = document.getElementById('csv-paste');
+  if (csvPaste) csvPaste.value = '';
+
+  const tbody = document.querySelector('#manual-table tbody');
+  if (tbody) {
+    tbody.innerHTML = '';
+    addManualRow(tbody, 'Category A', 85);
+    addManualRow(tbody, 'Category B', 62);
+    addManualRow(tbody, 'Category C', 108);
+  }
+
+  const fileInput = document.getElementById('csv-file-input');
+  if (fileInput) fileInput.value = '';
+  const filename = document.getElementById('upload-filename');
+  if (filename) { filename.textContent = ''; filename.hidden = true; }
+
+  if (buildListenersReady) return;
+  buildListenersReady = true;
+
+  // Input method tabs
+  document.querySelectorAll('.data-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const mode = tab.dataset.input;
+      document.querySelectorAll('.data-tab').forEach(t => t.classList.toggle('active', t === tab));
+      $('input-paste').hidden = mode !== 'paste';
+      $('input-upload').hidden = mode !== 'upload';
+      $('input-manual').hidden = mode !== 'manual';
+      if (mode === 'paste') onBuildDataChange(parseCSV(document.getElementById('csv-paste').value));
+      else if (mode === 'manual') syncManualData();
+    });
+  });
+
+  // Paste CSV
+  document.getElementById('csv-paste').addEventListener('input', e => onBuildDataChange(parseCSV(e.target.value)));
+
+  // File upload
+  document.getElementById('csv-file-input').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    const fn = document.getElementById('upload-filename');
+    fn.textContent = file.name; fn.hidden = false;
+    const reader = new FileReader();
+    reader.onload = ev => onBuildDataChange(parseCSV(ev.target.result));
+    reader.readAsText(file);
+  });
+
+  // Drag-and-drop on upload area
+  const uploadLabel = document.getElementById('csv-upload-label');
+  uploadLabel.addEventListener('dragover', e => { e.preventDefault(); uploadLabel.classList.add('drag-over'); });
+  uploadLabel.addEventListener('dragleave', () => uploadLabel.classList.remove('drag-over'));
+  uploadLabel.addEventListener('drop', e => {
+    e.preventDefault(); uploadLabel.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0]; if (!file) return;
+    const fn = document.getElementById('upload-filename');
+    fn.textContent = file.name; fn.hidden = false;
+    const reader = new FileReader();
+    reader.onload = ev => onBuildDataChange(parseCSV(ev.target.result));
+    reader.readAsText(file);
+  });
+
+  // Add row
+  document.getElementById('add-row-btn').addEventListener('click', () => {
+    addManualRow(document.querySelector('#manual-table tbody'));
+    syncManualData();
+  });
+
+  // Build Chart → navigate to builder
+  document.getElementById('build-chart-btn').addEventListener('click', () => {
+    if (!currentBuildData.length) return;
+    sessionStorage.setItem('builderState', JSON.stringify({
+      chartId: state.openVizId,
+      data: currentBuildData,
+      theme: state.theme,
+      chartStyle: state.chartStyle,
+    }));
+    window.location.href = 'builder.html';
+  });
+}
+
 /* ── Modal ───────────────────────────────────────────────────────────────── */
 function openModal(vizId) {
   const viz = state.catalog.find(v => v.id === vizId);
   if (!viz) return;
 
   state.openVizId = vizId;
+
+  // Enable Build tab for bar-chart only; always reset to Explore tab
+  const _buildTab = document.querySelector('.modal-tab[data-tab="build"]');
+  const _soonPill = _buildTab.querySelector('.coming-soon-pill');
+  _buildTab.disabled = vizId !== 'bar-chart';
+  if (_soonPill) _soonPill.style.display = vizId !== 'bar-chart' ? '' : 'none';
+  document.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'explore'));
+  $('modal-tab-explore').hidden = false;
+  $('modal-tab-build').hidden = true;
 
   // Update URL
   const url = new URL(window.location);
@@ -3473,6 +3615,7 @@ document.querySelectorAll('.modal-tab').forEach(tab => {
     tab.classList.add('active');
     $('modal-tab-explore').hidden = tab.dataset.tab !== 'explore';
     $('modal-tab-build').hidden = tab.dataset.tab !== 'build';
+    if (tab.dataset.tab === 'build') initBuildTab();
   });
 });
 
