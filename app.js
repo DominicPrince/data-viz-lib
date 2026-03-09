@@ -1167,7 +1167,7 @@ const CHART_RECOMMENDATIONS = {
 /* ── Load catalog ────────────────────────────────────────────────────────── */
 async function loadCatalog() {
   showSkeletons();
-  const res = await fetch('data/catalog.json?v=36');
+  const res = await fetch('data/catalog.json?v=37');
   state.catalog = await res.json();
 
   state.fuse = new Fuse(state.catalog, {
@@ -2033,10 +2033,17 @@ function renderTableChartSVG(theme) {
   const tk = chartTokens(theme);
   const dark = isColorDark(theme.bg);
 
-  const textColor  = dark ? 'rgba(255,255,255,0.82)' : 'rgba(0,0,0,0.75)';
-  const mutedColor = dark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.38)';
-  const divider    = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
-  const r = Math.min(tk.barRadius, 8);
+  // The card is always white (light) / near-black (dark) — independent of theme bg
+  const cardBg     = dark ? '#1C1C1E' : '#FFFFFF';
+  const headerBg   = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.025)';
+  const textColor  = dark ? 'rgba(255,255,255,0.80)' : 'rgba(0,0,0,0.70)';
+  const mutedColor = dark ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.35)';
+  const divider    = dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+  const cardRadius = 10;
+
+  // Grey chip (Category / Nat. Rep.)
+  const greyChipBg   = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)';
+  const greyChipText = dark ? 'rgba(255,255,255,0.50)' : 'rgba(0,0,0,0.45)';
 
   const cols = ['Category', 'Audience A', 'Audience B', 'Nat. Rep.'];
   const rows = [
@@ -2046,52 +2053,73 @@ function renderTableChartSVG(theme) {
     ['35–54',  '44%', '21%',  '37%'],
   ];
 
-  const PAD = 20;
+  const PAD     = 20;
   const tableW  = W - PAD * 2;
   const colW    = tableW / cols.length;
-  const headerH = 40;
+  const headerH = 48;   // taller header row so chips have breathing room
   const rowH    = 36;
   const tableH  = headerH + rows.length * rowH;
   const tableX  = PAD;
   const tableY  = Math.round((H - tableH) / 2);
 
-  const headerCols = [
-    { bg: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', fg: mutedColor },
-    { bg: theme.palette[0], fg: 'rgba(255,255,255,0.95)' },
-    { bg: theme.palette[1] || theme.palette[0], fg: 'rgba(255,255,255,0.95)' },
-    { bg: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', fg: mutedColor },
+  // Chip geometry — floating pill inside header cell
+  const chipH   = 26;
+  const chipR   = 6;
+  const chipPad = 10;   // horizontal gap between chip edge and cell edge
+  const chipY   = tableY + (headerH - chipH) / 2;
+
+  // Per-column chip config
+  const chips = [
+    { bg: greyChipBg, fg: greyChipText },
+    { bg: theme.palette[0],                     fg: '#FFFFFF' },
+    { bg: theme.palette[1] || theme.palette[0], fg: '#FFFFFF' },
+    { bg: greyChipBg, fg: greyChipText },
   ];
-  const valueCols = [textColor, theme.palette[0], theme.palette[1] || theme.palette[0], mutedColor];
+
+  // Per-column value text colour
+  const valueCols = [
+    textColor,
+    theme.palette[0],
+    theme.palette[1] || theme.palette[0],
+    mutedColor,
+  ];
 
   const clipId = `tc_${Math.random().toString(36).slice(2, 7)}`;
 
   let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:${tk.font};width:100%;height:100%">`;
+
+  // Outer bg (theme bg — tinted for Journeys, white for others)
   svg += `<rect width="${W}" height="${H}" fill="${theme.bg}"/>`;
 
-  // Clip table to rounded rect; table body sits on white regardless of chart bg
-  const tableSurface = dark ? theme.bg : '#FFFFFF';
-  svg += `<defs><clipPath id="${clipId}"><rect x="${tableX}" y="${tableY}" width="${tableW}" height="${tableH}" rx="${r}"/></clipPath></defs>`;
-  svg += `<g clip-path="url(#${clipId})">`;
-  svg += `<rect x="${tableX}" y="${tableY}" width="${tableW}" height="${tableH}" fill="${tableSurface}"/>`;
+  // White card
+  svg += `<rect x="${tableX}" y="${tableY}" width="${tableW}" height="${tableH}" rx="${cardRadius}" fill="${cardBg}"/>`;
 
-  // Header cells
+  // Clip everything inside the card
+  svg += `<defs><clipPath id="${clipId}"><rect x="${tableX}" y="${tableY}" width="${tableW}" height="${tableH}" rx="${cardRadius}"/></clipPath></defs>`;
+  svg += `<g clip-path="url(#${clipId})">`;
+
+  // Header row bg — very subtle tint
+  svg += `<rect x="${tableX}" y="${tableY}" width="${tableW}" height="${headerH}" fill="${headerBg}"/>`;
+
+  // Pill chips — floating within header cells
   cols.forEach((col, i) => {
-    const x = tableX + i * colW;
-    const hc = headerCols[i];
-    svg += `<rect x="${x}" y="${tableY}" width="${colW}" height="${headerH}" fill="${hc.bg}"/>`;
-    svg += `<text x="${(x + colW / 2).toFixed(1)}" y="${(tableY + headerH / 2 + 4.5).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="600" fill="${hc.fg}">${col}</text>`;
+    const cellX  = tableX + i * colW;
+    const chipX  = cellX + chipPad;
+    const chipW  = colW - chipPad * 2;
+    const chip   = chips[i];
+    svg += `<rect x="${chipX.toFixed(1)}" y="${chipY.toFixed(1)}" width="${chipW.toFixed(1)}" height="${chipH}" rx="${chipR}" fill="${chip.bg}"/>`;
+    svg += `<text x="${(chipX + chipW / 2).toFixed(1)}" y="${(chipY + chipH / 2 + 4.5).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="600" fill="${chip.fg}">${col}</text>`;
   });
 
-  // Header/body divider
+  // Header / body divider
   svg += `<line x1="${tableX}" y1="${tableY + headerH}" x2="${tableX + tableW}" y2="${tableY + headerH}" stroke="${divider}" stroke-width="1"/>`;
 
   // Data rows
   rows.forEach((row, ri) => {
     const rowY = tableY + headerH + ri * rowH;
     row.forEach((cell, ci) => {
-      const cx = (tableX + ci * colW + colW / 2).toFixed(1);
-      const cy = (rowY + rowH / 2 + 4.5).toFixed(1);
-      svg += `<text x="${cx}" y="${cy}" text-anchor="middle" font-size="12" font-weight="${ci === 0 ? '400' : '600'}" fill="${valueCols[ci]}">${cell}</text>`;
+      const isLabel = ci === 0;
+      svg += `<text x="${(tableX + ci * colW + colW / 2).toFixed(1)}" y="${(rowY + rowH / 2 + 4.5).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="${isLabel ? '400' : '600'}" fill="${valueCols[ci]}">${cell}</text>`;
     });
     if (ri < rows.length - 1) {
       svg += `<line x1="${tableX}" y1="${rowY + rowH}" x2="${tableX + tableW}" y2="${rowY + rowH}" stroke="${divider}" stroke-width="1"/>`;
@@ -2099,7 +2127,9 @@ function renderTableChartSVG(theme) {
   });
 
   svg += '</g>';
-  svg += `<rect x="${tableX}" y="${tableY}" width="${tableW}" height="${tableH}" rx="${r}" fill="none" stroke="${divider}" stroke-width="1"/>`;
+
+  // Card border
+  svg += `<rect x="${tableX}" y="${tableY}" width="${tableW}" height="${tableH}" rx="${cardRadius}" fill="none" stroke="${divider}" stroke-width="1"/>`;
   svg += '</svg>';
   return svg;
 }
