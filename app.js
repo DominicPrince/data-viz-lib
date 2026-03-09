@@ -41,7 +41,7 @@ const PRESETS = {
     font: 'Inter',
   },
   journeys: {
-    bg: '#FFFFFF',
+    bg: '#F0F7FC',
     palette: ['#29ABE2', '#26C6A0', '#F44336', '#E91E8C', '#7B3FC4', '#5C2D91'],
     font: "'Graphik', 'Inter', sans-serif",
   },
@@ -62,7 +62,7 @@ const CHART_STYLES = {
   classic:   { name:'Classic',   barRadius:0, lineSmooth:false, lineDots:true,  areaFill:'solid',    gridScale:3,   gridDash:'',    strokeW:1.5, fontOverride:'Georgia, serif',         glow:false, axisLabels:true  },
   neon:      { name:'Neon',      barRadius:1, lineSmooth:true,  lineDots:true,  areaFill:'gradient', gridScale:1,   gridDash:'3 3', strokeW:2,   fontOverride:'"Courier New", monospace', glow:true,  axisLabels:true  },
   editorial: { name:'Editorial', barRadius:0, lineSmooth:false, lineDots:false, areaFill:'solid',    gridScale:5,   gridDash:'',    strokeW:3,   fontOverride:null,                                           glow:false, axisLabels:true  },
-  journeys:  { name:'Journeys', barRadius:8, lineSmooth:true,  lineDots:false, areaFill:'gradient', gridScale:0.4, gridDash:'',    strokeW:2,   fontOverride:"'Graphik', 'Inter', sans-serif",                glow:false, axisLabels:true  },
+  journeys:  { name:'Journeys', barRadius:12, lineSmooth:true,  lineDots:true,  areaFill:'gradient', gridScale:0,   gridDash:'',    strokeW:2.5, fontOverride:"'Graphik', 'Inter', sans-serif",               glow:false, axisLabels:true  },
 };
 
 /* ── Vega theme builder ──────────────────────────────────────────────────── */
@@ -1167,7 +1167,7 @@ const CHART_RECOMMENDATIONS = {
 /* ── Load catalog ────────────────────────────────────────────────────────── */
 async function loadCatalog() {
   showSkeletons();
-  const res = await fetch('data/catalog.json');
+  const res = await fetch('data/catalog.json?v=36');
   state.catalog = await res.json();
 
   state.fuse = new Fuse(state.catalog, {
@@ -2068,9 +2068,11 @@ function renderTableChartSVG(theme) {
   let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:${tk.font};width:100%;height:100%">`;
   svg += `<rect width="${W}" height="${H}" fill="${theme.bg}"/>`;
 
-  // Clip table to rounded rect
+  // Clip table to rounded rect; table body sits on white regardless of chart bg
+  const tableSurface = dark ? theme.bg : '#FFFFFF';
   svg += `<defs><clipPath id="${clipId}"><rect x="${tableX}" y="${tableY}" width="${tableW}" height="${tableH}" rx="${r}"/></clipPath></defs>`;
   svg += `<g clip-path="url(#${clipId})">`;
+  svg += `<rect x="${tableX}" y="${tableY}" width="${tableW}" height="${tableH}" fill="${tableSurface}"/>`;
 
   // Header cells
   cols.forEach((col, i) => {
