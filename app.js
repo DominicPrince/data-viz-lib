@@ -1167,7 +1167,7 @@ const CHART_RECOMMENDATIONS = {
 /* ── Load catalog ────────────────────────────────────────────────────────── */
 async function loadCatalog() {
   showSkeletons();
-  const res = await fetch('data/catalog.json?v=39');
+  const res = await fetch('data/catalog.json?v=40');
   state.catalog = await res.json();
 
   state.fuse = new Fuse(state.catalog, {
@@ -2939,19 +2939,23 @@ function renderRadarChartSVG(theme) {
 
 function renderTreemapSVG(theme) {
   const W = 560, H = 300;
-  const p = 5;
+  const p = 40, gap = 8; // generous padding + gap so tiles float with breathing room
   const { c0, barRadius: r } = chartTokens(theme);
   const rr = Math.min(r, 4);
   const colors = [c0, theme.palette[1]||c0, theme.palette[2]||c0, theme.palette[3]||c0];
-  // 4 clean tiles, no labels — like the original simple preview
+  // Asymmetric layout: one dominant left tile + 3 smaller right tiles
+  const cW = W - p*2, cH = H - p*2;
+  const lw = Math.round(cW * 0.52); // large left tile width
+  const rw = cW - lw - gap;         // right column width
+  const th = Math.round((cH - gap) / 2); // top/bottom half height
   const tiles = [
-    {x:p,     y:p,     w:272, h:142},
-    {x:p+276, y:p,     w:277, h:142},
-    {x:p,     y:p+146, w:185, h:143},
-    {x:p+189, y:p+146, w:364, h:143},
+    {x:p,          y:p,       w:lw, h:cH},            // large left
+    {x:p+lw+gap,   y:p,       w:rw, h:th},             // top-right
+    {x:p+lw+gap,   y:p+th+gap,w:Math.round(rw*0.47), h:th}, // bottom-right small
+    {x:p+lw+gap+Math.round(rw*0.47)+gap, y:p+th+gap, w:rw-Math.round(rw*0.47)-gap, h:th}, // bottom-right smaller
   ];
   const cells = tiles.map((t,i) =>
-    `<rect x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}" rx="${rr}" fill="${colors[i]}" fill-opacity="0.82"/>`
+    `<rect x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}" rx="${rr}" fill="${colors[i]}" fill-opacity="0.85"/>`
   ).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${cells}</svg>`;
 }
