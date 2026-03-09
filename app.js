@@ -40,6 +40,11 @@ const PRESETS = {
     palette: ['#CCCCCC', '#999999', '#666666', '#444444', '#EEEEEE', '#222222'],
     font: 'Inter',
   },
+  journeys: {
+    bg: '#FFFFFF',
+    palette: ['#29ABE2', '#26C6A0', '#F44336', '#E91E8C', '#7B3FC4', '#5C2D91'],
+    font: "'Graphik', 'Inter', sans-serif",
+  },
 };
 
 // Load custom theme from session, falling back to a copy of Default
@@ -56,7 +61,8 @@ const CHART_STYLES = {
   minimal:   { name:'Minimal',   barRadius:2, lineSmooth:true,  lineDots:false, areaFill:'none',     gridScale:0,   gridDash:'',    strokeW:1.5, fontOverride:null,                     glow:false, axisLabels:false },
   classic:   { name:'Classic',   barRadius:0, lineSmooth:false, lineDots:true,  areaFill:'solid',    gridScale:3,   gridDash:'',    strokeW:1.5, fontOverride:'Georgia, serif',         glow:false, axisLabels:true  },
   neon:      { name:'Neon',      barRadius:1, lineSmooth:true,  lineDots:true,  areaFill:'gradient', gridScale:1,   gridDash:'3 3', strokeW:2,   fontOverride:'"Courier New", monospace', glow:true,  axisLabels:true  },
-  editorial: { name:'Editorial', barRadius:0, lineSmooth:false, lineDots:false, areaFill:'solid',    gridScale:5,   gridDash:'',    strokeW:3,   fontOverride:null,                     glow:false, axisLabels:true  },
+  editorial: { name:'Editorial', barRadius:0, lineSmooth:false, lineDots:false, areaFill:'solid',    gridScale:5,   gridDash:'',    strokeW:3,   fontOverride:null,                                           glow:false, axisLabels:true  },
+  journeys:  { name:'Journeys', barRadius:8, lineSmooth:true,  lineDots:false, areaFill:'gradient', gridScale:0.4, gridDash:'',    strokeW:2,   fontOverride:"'Graphik', 'Inter', sans-serif",                glow:false, axisLabels:true  },
 };
 
 /* ── Vega theme builder ──────────────────────────────────────────────────── */
@@ -1037,9 +1043,14 @@ const paletteSwatches = $('palette-swatches');
 const addPaletteColor = $('add-palette-color');
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
-sidebarToggle.addEventListener('click', () => {
-  const open = sidebar.classList.toggle('sidebar--collapsed');
-  document.body.classList.toggle('sidebar-open', !open);
+sidebar.addEventListener('click', e => {
+  if (sidebar.classList.contains('sidebar--collapsed')) {
+    sidebar.classList.remove('sidebar--collapsed');
+    document.body.classList.add('sidebar-open');
+  } else if (e.target === sidebarToggle || sidebarToggle.contains(e.target)) {
+    sidebar.classList.add('sidebar--collapsed');
+    document.body.classList.remove('sidebar-open');
+  }
 });
 
 document.addEventListener('click', e => {
@@ -1063,10 +1074,10 @@ const CHART_RECOMMENDATIONS = {
   'single:movement':      [],
 
   // One value for each category
-  'per_cat:compare':      ['bar-chart', 'grouped-bar-chart', 'lollipop-chart', 'dot-plot', 'bullet-chart', 'error-bar-chart'],
+  'per_cat:compare':      ['bar-chart', 'grouped-bar-chart', 'lollipop-chart', 'dot-plot', 'bullet-chart', 'error-bar-chart', 'data-table'],
   'per_cat:change':       ['slope-chart', 'dumbbell-chart', 'bump-chart'],
   'per_cat:distribution': ['strip-plot', 'beeswarm-plot', 'dot-plot'],
-  'per_cat:relationships':['heatmap', 'scatter-plot'],
+  'per_cat:relationships':['heatmap', 'scatter-plot', 'data-table'],
   'per_cat:composition':  ['pie-chart', 'donut-chart', 'waffle-chart', 'marimekko-chart'],
   'per_cat:ranking':      ['bar-chart', 'lollipop-chart', 'dot-plot', 'bump-chart'],
   'per_cat:geographic':   ['choropleth-map', 'proportional-symbol-map'],
@@ -1083,7 +1094,7 @@ const CHART_RECOMMENDATIONS = {
   'over_time:movement':     ['gantt-chart', 'waterfall-chart'],
 
   // Several series over time
-  'series_time:compare':      ['line-chart', 'grouped-bar-chart', 'slope-chart', 'bump-chart'],
+  'series_time:compare':      ['line-chart', 'grouped-bar-chart', 'slope-chart', 'bump-chart', 'data-table'],
   'series_time:change':       ['line-chart', 'stacked-area-chart', 'streamgraph', 'area-chart'],
   'series_time:distribution': ['heatmap', 'ridge-plot', 'calendar-heatmap'],
   'series_time:relationships':['heatmap', 'parallel-coordinates'],
@@ -1103,7 +1114,7 @@ const CHART_RECOMMENDATIONS = {
   'spread:movement':     [],
 
   // Two numeric variables
-  'two_num:compare':      ['scatter-plot', 'bubble-chart', 'dumbbell-chart'],
+  'two_num:compare':      ['scatter-plot', 'bubble-chart', 'dumbbell-chart', 'data-table'],
   'two_num:change':       ['connected-scatter-plot', 'scatter-plot'],
   'two_num:distribution': ['scatter-plot', 'density-plot', 'heatmap'],
   'two_num:relationships':['scatter-plot', 'bubble-chart', 'connected-scatter-plot', 'heatmap'],
@@ -2017,6 +2028,80 @@ function renderGroupedBarChartSVG(theme) {
     `${grid}<g${glowAttr}>${bars}</g>${xLabels}</svg>`;
 }
 
+function renderTableChartSVG(theme) {
+  const W = 560, H = 300;
+  const tk = chartTokens(theme);
+  const dark = isColorDark(theme.bg);
+
+  const textColor  = dark ? 'rgba(255,255,255,0.82)' : 'rgba(0,0,0,0.75)';
+  const mutedColor = dark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.38)';
+  const divider    = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+  const r = Math.min(tk.barRadius, 8);
+
+  const cols = ['Category', 'Audience A', 'Audience B', 'Nat. Rep.'];
+  const rows = [
+    ['Female', '60%', '—',    '51%'],
+    ['Male',   '40%', '100%', '49%'],
+    ['18–34',  '38%', '72%',  '29%'],
+    ['35–54',  '44%', '21%',  '37%'],
+  ];
+
+  const PAD = 20;
+  const tableW  = W - PAD * 2;
+  const colW    = tableW / cols.length;
+  const headerH = 40;
+  const rowH    = 36;
+  const tableH  = headerH + rows.length * rowH;
+  const tableX  = PAD;
+  const tableY  = Math.round((H - tableH) / 2);
+
+  const headerCols = [
+    { bg: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', fg: mutedColor },
+    { bg: theme.palette[0], fg: 'rgba(255,255,255,0.95)' },
+    { bg: theme.palette[1] || theme.palette[0], fg: 'rgba(255,255,255,0.95)' },
+    { bg: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', fg: mutedColor },
+  ];
+  const valueCols = [textColor, theme.palette[0], theme.palette[1] || theme.palette[0], mutedColor];
+
+  const clipId = `tc_${Math.random().toString(36).slice(2, 7)}`;
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:${tk.font};width:100%;height:100%">`;
+  svg += `<rect width="${W}" height="${H}" fill="${theme.bg}"/>`;
+
+  // Clip table to rounded rect
+  svg += `<defs><clipPath id="${clipId}"><rect x="${tableX}" y="${tableY}" width="${tableW}" height="${tableH}" rx="${r}"/></clipPath></defs>`;
+  svg += `<g clip-path="url(#${clipId})">`;
+
+  // Header cells
+  cols.forEach((col, i) => {
+    const x = tableX + i * colW;
+    const hc = headerCols[i];
+    svg += `<rect x="${x}" y="${tableY}" width="${colW}" height="${headerH}" fill="${hc.bg}"/>`;
+    svg += `<text x="${(x + colW / 2).toFixed(1)}" y="${(tableY + headerH / 2 + 4.5).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="600" fill="${hc.fg}">${col}</text>`;
+  });
+
+  // Header/body divider
+  svg += `<line x1="${tableX}" y1="${tableY + headerH}" x2="${tableX + tableW}" y2="${tableY + headerH}" stroke="${divider}" stroke-width="1"/>`;
+
+  // Data rows
+  rows.forEach((row, ri) => {
+    const rowY = tableY + headerH + ri * rowH;
+    row.forEach((cell, ci) => {
+      const cx = (tableX + ci * colW + colW / 2).toFixed(1);
+      const cy = (rowY + rowH / 2 + 4.5).toFixed(1);
+      svg += `<text x="${cx}" y="${cy}" text-anchor="middle" font-size="12" font-weight="${ci === 0 ? '400' : '600'}" fill="${valueCols[ci]}">${cell}</text>`;
+    });
+    if (ri < rows.length - 1) {
+      svg += `<line x1="${tableX}" y1="${rowY + rowH}" x2="${tableX + tableW}" y2="${rowY + rowH}" stroke="${divider}" stroke-width="1"/>`;
+    }
+  });
+
+  svg += '</g>';
+  svg += `<rect x="${tableX}" y="${tableY}" width="${tableW}" height="${tableH}" rx="${r}" fill="none" stroke="${divider}" stroke-width="1"/>`;
+  svg += '</svg>';
+  return svg;
+}
+
 const CUSTOM_RENDERERS = {
   'bar-chart':         renderBarChartSVG,
   'line-chart':        renderLineChartSVG,
@@ -2025,6 +2110,7 @@ const CUSTOM_RENDERERS = {
   'pie-chart':         renderPieChartSVG,
   'donut-chart':       renderDonutChartSVG,
   'grouped-bar-chart': renderGroupedBarChartSVG,
+  'data-table':        renderTableChartSVG,
 };
 
 function renderCustomChart(vizId, container, theme) {
@@ -2199,6 +2285,13 @@ function applyPreset(name) {
   fontSelect.value = preset.font;
   renderPaletteSwatches();
   document.getElementById('custom-controls').style.display = name === 'custom' ? '' : 'none';
+  // Journeys preset → auto-apply Journeys chart style
+  if (name === 'journeys') {
+    state.chartStyle = 'journeys';
+    document.querySelectorAll('.style-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.style === 'journeys')
+    );
+  }
   applyTheme();
 }
 
