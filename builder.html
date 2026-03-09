@@ -228,36 +228,68 @@
     return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  /* Canvas-based text measurement for SVG word-wrap */
+  const _wrapCanvas = document.createElement('canvas');
+  const _wrapCtx = _wrapCanvas.getContext('2d');
+
+  function wrapSVGText(text, maxWidth, fontSize, isBold, fontFamily) {
+    if (!text) return [];
+    // Use primary font name for measurement (strips quotes and fallbacks)
+    const primary = fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+    _wrapCtx.font = `${isBold ? '700 ' : ''}${fontSize}px ${primary}`;
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    for (const word of words) {
+      const test = line ? line + ' ' + word : word;
+      if (_wrapCtx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
   /* Wraps chart inner content with title / subtitle / source / logo */
   function composeSVG(innerContent, state) {
     const W = 560, chartH = 300;
     const { theme, options, chartStyle } = state;
     const { title, subtitle, source, logoDataUrl } = options;
 
+    const tok = chartTokens(theme, chartStyle);
+    const font = tok.font;
+    const maxTextW = W - 48; // 24px padding each side
+
+    // Wrap both text fields; line heights: title=22px, subtitle=18px
+    const titleLines    = wrapSVGText(title,    maxTextW, 18, true,  font);
+    const subtitleLines = wrapSVGText(subtitle, maxTextW, 13, false, font);
+
+    // topPad: 40px base for first title line + 22px per extra; 24px base for subtitle + 18px per extra
     let topPad = 0, bottomPad = 0;
-    if (title)               topPad    += 40;
-    if (subtitle)            topPad    += 24;
+    if (titleLines.length)     topPad += 40 + (titleLines.length    - 1) * 22;
+    if (subtitleLines.length)  topPad += 24 + (subtitleLines.length - 1) * 18;
     if (source || logoDataUrl) bottomPad += 44;
 
     const totalH = chartH + topPad + bottomPad;
     const dark = isColorDark(theme.bg);
     const textColor  = dark ? 'rgba(255,255,255,0.85)' : '#1A1816';
     const mutedColor = dark ? 'rgba(255,255,255,0.45)' : '#767676';
-    const tok = chartTokens(theme, chartStyle);
-    const font = tok.font;
 
     let out = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${totalH}">`;
     out += `<rect width="${W}" height="${totalH}" fill="${theme.bg}"/>`;
 
     let ty = 0;
-    if (title) {
-      out += `<text x="24" y="${ty + 30}" font-size="18" font-weight="700" font-family="${font}" fill="${textColor}">${escSVG(title)}</text>`;
-      ty += 40;
-    }
-    if (subtitle) {
-      out += `<text x="24" y="${ty + 16}" font-size="13" font-family="${font}" fill="${mutedColor}">${escSVG(subtitle)}</text>`;
-      ty += 24;
-    }
+    titleLines.forEach((ln, i) => {
+      out += `<text x="24" y="${ty + 30 + i * 22}" font-size="18" font-weight="700" font-family="${font}" fill="${textColor}">${escSVG(ln)}</text>`;
+    });
+    if (titleLines.length) ty += 40 + (titleLines.length - 1) * 22;
+
+    subtitleLines.forEach((ln, i) => {
+      out += `<text x="24" y="${ty + 16 + i * 18}" font-size="13" font-family="${font}" fill="${mutedColor}">${escSVG(ln)}</text>`;
+    });
 
     out += `<g transform="translate(0,${topPad})">${innerContent}</g>`;
 
