@@ -3134,24 +3134,80 @@ function renderProportionalSymbolMapSVG(theme) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${land}${symbols}</svg>`;
 }
 
+// World atlas TopoJSON — fetched once, cached
+let _worldAtlas = null;
+const _worldAtlasLoad = fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+  .then(r => r.json())
+  .then(d => { _worldAtlas = d; })
+  .catch(() => {});
+
+// Sample data: ISO 3166-1 numeric → index value (0–100)
+const _choroplethSample = {
+  840:85, 124:82, 484:45, 76:62, 32:68, 152:65, 170:50, 604:42, 858:65, 862:35,
+  826:80, 250:78, 276:82, 380:74, 724:74, 528:82, 752:88, 756:90, 578:86, 246:84,
+  208:82, 40:76, 56:80, 620:68, 300:50, 616:58, 203:70, 348:62, 642:48, 100:44,
+  804:38, 643:52, 792:55, 710:58, 566:30, 818:40, 504:44, 12:42, 788:42, 404:28,
+  800:22, 834:25, 231:18, 288:32, 384:30, 716:22, 508:20, 682:68, 784:85, 634:72,
+  414:75, 376:70, 364:42, 368:38, 156:72, 356:52, 392:88, 410:84, 36:82, 554:76,
+  360:50, 764:52, 458:65, 702:88, 704:42, 608:45, 50:28, 586:38,
+};
+
 function renderChoroplethMapSVG(theme) {
   const W = 560, H = 300;
-  const { c0 } = chartTokens(theme);
   const dark = isColorDark(theme.bg);
-  const borderColor = dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
-  // Rough grid of regions at varying opacities
-  const regions = [
-    {x:30,y:20,w:110,h:90,v:.8},{x:145,y:20,w:90,h:90,v:.3},{x:240,y:20,w:130,h:90,v:.95},
-    {x:375,y:20,w:80,h:90,v:.5},{x:460,y:20,w:80,h:90,v:.15},
-    {x:30,y:115,w:80,h:85,v:.6},{x:115,y:115,w:120,h:85,v:.45},{x:240,y:115,w:100,h:85,v:.75},
-    {x:345,y:115,w:110,h:85,v:.2},{x:460,y:115,w:80,h:85,v:.88},
-    {x:30,y:205,w:130,h:75,v:.35},{x:165,y:205,w:90,h:75,v:.65},{x:260,y:205,w:120,h:75,v:.50},
-    {x:385,y:205,w:80,h:75,v:.9},{x:470,y:205,w:70,h:75,v:.25},
-  ];
-  const cells = regions.map(r =>
-    `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="2" fill="${c0}" fill-opacity="${(0.08+r.v*0.82).toFixed(2)}" stroke="${borderColor}" stroke-width="1.5"/>`
-  ).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${cells}</svg>`;
+
+  if (!_worldAtlas) {
+    // Atlas not ready yet — show placeholder and re-render once it arrives
+    _worldAtlasLoad.then(() => {
+      if (!_worldAtlas) return;
+      const modal = document.getElementById('modal-chart');
+      const card  = document.getElementById('preview-choropleth-map');
+      if (modal && state.openVizId === 'choropleth-map') modal.innerHTML = renderChoroplethMapSVG(state.theme);
+      if (card) card.innerHTML = renderChoroplethMapSVG(state.theme);
+    });
+    const muted = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+    const label = dark ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.22)';
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/><circle cx="280" cy="150" r="105" fill="none" stroke="${muted}" stroke-width="1"/><text x="280" y="156" text-anchor="middle" font-size="13" font-family="system-ui,sans-serif" fill="${label}">Loading map…</text></svg>`;
+  }
+
+  const { c0 } = chartTokens(theme);
+  const hex = c0.replace('#', '');
+  const r2 = parseInt(hex.slice(0,2),16), g2 = parseInt(hex.slice(2,4),16), b2 = parseInt(hex.slice(4,6),16);
+  const r1 = dark ? 45 : 225, g1 = dark ? 45 : 225, b1 = dark ? 45 : 225;
+
+  const vals = Object.values(_choroplethSample);
+  const minV = Math.min(...vals), maxV = Math.max(...vals);
+
+  function chorColor(id) {
+    const v = _choroplethSample[id];
+    if (v == null) return dark ? '#2c2c2c' : '#e4e4e4';
+    const t = (v - minV) / (maxV - minV);
+    return `rgb(${Math.round(r1+(r2-r1)*t)},${Math.round(g1+(g2-g1)*t)},${Math.round(b1+(b2-b1)*t)})`;
+  }
+
+  const projection = d3.geoNaturalEarth1().fitSize([W, H], {type:'Sphere'});
+  const pathGen    = d3.geoPath(projection);
+  const countries  = topojson.feature(_worldAtlas, _worldAtlas.objects.countries);
+
+  const oceanColor  = dark ? '#1a2535' : '#c5d8e8';
+  const strokeColor = dark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.85)';
+  const gratColor   = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+  const spherePath  = pathGen({type:'Sphere'});
+  const gratPath    = pathGen(d3.geoGraticule()());
+
+  const paths = countries.features.map(f => {
+    const d = pathGen(f);
+    if (!d) return '';
+    return `<path d="${d}" fill="${chorColor(f.id)}" stroke="${strokeColor}" stroke-width="0.4"/>`;
+  }).join('');
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%">` +
+    `<rect width="${W}" height="${H}" fill="${theme.bg}"/>` +
+    `<path d="${spherePath}" fill="${oceanColor}"/>` +
+    `<path d="${gratPath}" fill="none" stroke="${gratColor}" stroke-width="0.5"/>` +
+    paths +
+    `<path d="${spherePath}" fill="none" stroke="${dark?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.18)'}" stroke-width="0.8"/>` +
+    `</svg>`;
 }
 
 function renderGaugeChartSVG(theme) {

@@ -25,3 +25,15 @@ Then open `http://localhost:8000`.
 1. Add an entry to `data/catalog.json`
 2. Add a Vega-Lite spec function to `getVegaSpec()` in `app.js`
 3. That's it.
+
+## Backlog
+
+### Real choropleth map
+The current `choropleth-map` renderer is a placeholder (grid of rectangles). Replace with a proper data-driven choropleth using TopoJSON/GeoJSON country boundaries projected to SVG paths, with countries filled by series value.
+
+Regions to support:
+- World (all countries)
+- Europe
+- The Americas
+- Africa
+- APAC
