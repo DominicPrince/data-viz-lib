@@ -999,6 +999,41 @@ body.sidebar-open .main {
   padding: 0 8px 6px 8px;
 }
 .manual-table th:last-child { width: 28px; }
+.col-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--color-border);
+  color: var(--color-muted);
+  font-size: 9px;
+  font-weight: 700;
+  font-style: normal;
+  cursor: help;
+  margin-left: 4px;
+  vertical-align: middle;
+  position: relative;
+  line-height: 1;
+}
+.col-tip-popup {
+  position: fixed;
+  background: #1C1A17;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.45;
+  padding: 6px 10px;
+  border-radius: 7px;
+  width: max-content;
+  max-width: 200px;
+  white-space: normal;
+  pointer-events: none;
+  z-index: 99999;
+  transform: translateX(-50%);
+}
 .manual-table td { padding: 3px 4px; }
 .manual-cell {
   width: 100%;

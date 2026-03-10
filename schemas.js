@@ -335,10 +335,10 @@ const CHART_SCHEMAS = {
     dataShape: 'xy-size',
     builderReady: true,
     columns: [
-      { key: 'x',     label: 'X',     type: 'number', required: true,  example: '24'     },
-      { key: 'y',     label: 'Y',     type: 'number', required: true,  example: '35'     },
-      { key: 'size',  label: 'Size',  type: 'number', required: true,  example: '12'     },
-      { key: 'label', label: 'Label', type: 'string', required: false, example: 'UK'     },
+      { key: 'x',     label: 'X',     type: 'number', required: true,  example: '24', tooltip: 'One quantitative variable — e.g. GDP per capita, price, temperature'                      },
+      { key: 'y',     label: 'Y',     type: 'number', required: true,  example: '35', tooltip: 'A second quantitative variable — e.g. life expectancy, revenue, satisfaction score'        },
+      { key: 'size',  label: 'Size',  type: 'number', required: true,  example: '12', tooltip: 'A third variable encoded as bubble area — e.g. population, market cap, volume'             },
+      { key: 'label', label: 'Label', type: 'string', required: false, example: 'UK', tooltip: 'The name of each point — e.g. country, company, product'                                   },
     ],
     csvHint: 'X,Y,Size,Label\n24,35,12,UK\n42,18,8,US\n31,55,20,Germany',
     config: {

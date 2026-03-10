@@ -1,5 +1,27 @@
 /* ── app.js ───────────────────────────────────────────────────────────────── */
 
+/* ── Col-tip tooltip (fixed-position to escape stacking contexts) ─────────── */
+(function () {
+  let _tipEl = null;
+  document.addEventListener('mouseover', e => {
+    const badge = e.target.closest('.col-tip');
+    if (!badge) return;
+    if (_tipEl) _tipEl.remove();
+    _tipEl = document.createElement('div');
+    _tipEl.className = 'col-tip-popup';
+    _tipEl.textContent = badge.dataset.tip || '';
+    document.body.appendChild(_tipEl);
+    const r = badge.getBoundingClientRect();
+    _tipEl.style.left = (r.left + r.width / 2) + 'px';
+    _tipEl.style.top  = (r.top - _tipEl.offsetHeight - 7) + 'px';
+  });
+  document.addEventListener('mouseout', e => {
+    const badge = e.target.closest('.col-tip');
+    if (!badge) return;
+    if (_tipEl) { _tipEl.remove(); _tipEl = null; }
+  });
+})();
+
 /* ── State ───────────────────────────────────────────────────────────────── */
 const state = {
   catalog: [],
@@ -3530,7 +3552,10 @@ function initBuildTab() {
 
   // Update manual table headers
   const thead = document.querySelector('#manual-table thead tr');
-  if (thead) thead.innerHTML = _buildSchemaCols.map(c => `<th>${c.label}</th>`).join('') + '<th></th>';
+  if (thead) thead.innerHTML = _buildSchemaCols.map(c => {
+    const tip = c.tooltip ? `<span class="col-tip" data-tip="${(c.tooltip||'').replace(/"/g,'&quot;')}">i</span>` : '';
+    return `<th>${c.label}${tip}</th>`;
+  }).join('') + '<th></th>';
 
   // Update CSV paste placeholder
   const csvPaste = document.getElementById('csv-paste');

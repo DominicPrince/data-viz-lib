@@ -457,6 +457,26 @@
     return (str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  /* ── Col-tip tooltip (fixed-position to escape stacking contexts) ── */
+  let _tipEl = null;
+  document.addEventListener('mouseover', e => {
+    const badge = e.target.closest('.col-tip');
+    if (!badge) return;
+    if (_tipEl) _tipEl.remove();
+    _tipEl = document.createElement('div');
+    _tipEl.className = 'col-tip-popup';
+    _tipEl.textContent = badge.dataset.tip || '';
+    document.body.appendChild(_tipEl);
+    const r = badge.getBoundingClientRect();
+    _tipEl.style.left = (r.left + r.width / 2) + 'px';
+    _tipEl.style.top  = (r.top - _tipEl.offsetHeight - 7) + 'px';
+  });
+  document.addEventListener('mouseout', e => {
+    const badge = e.target.closest('.col-tip');
+    if (!badge) return;
+    if (_tipEl) { _tipEl.remove(); _tipEl = null; }
+  });
+
   function hexToRgba(hex, alpha) {
     const c = hex.replace('#', '');
     return `rgba(${parseInt(c.substr(0,2),16)},${parseInt(c.substr(2,2),16)},${parseInt(c.substr(4,2),16)},${alpha})`;
@@ -1196,7 +1216,10 @@
   function openDataModal() {
     // Update table headers from schema
     const thead = document.querySelector('#dm-manual-table thead tr');
-    if (thead) thead.innerHTML = _schemaCols.map(c => `<th>${c.label}</th>`).join('') + '<th></th>';
+    if (thead) thead.innerHTML = _schemaCols.map(c => {
+      const tip = c.tooltip ? `<span class="col-tip" data-tip="${escAttr(c.tooltip)}">i</span>` : '';
+      return `<th>${c.label}${tip}</th>`;
+    }).join('') + '<th></th>';
 
     // Update CSV paste placeholder from schema
     const pasteTA = document.getElementById('dm-csv-paste');
