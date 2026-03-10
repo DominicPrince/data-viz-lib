@@ -667,6 +667,11 @@
   function _dismissDelPopup() { if (_delPopup) { _delPopup.remove(); _delPopup = null; } }
   document.addEventListener('click', e => { if (_delPopup && !_delPopup.contains(e.target)) _dismissDelPopup(); });
 
+  // Colour preset popover
+  let _colorPopup = null;
+  function _dismissColorPopup() { if (_colorPopup) { _colorPopup.remove(); _colorPopup = null; } }
+  document.addEventListener('click', e => { if (_colorPopup && !_colorPopup.contains(e.target)) _dismissColorPopup(); });
+
   // Data section — schema-driven rows with colour swatch + drag handle
   function populateDataDisplay() {
     const el = document.getElementById('builder-data-display');
@@ -687,9 +692,8 @@
       }).join('');
       return `<div class="data-row${sel}" id="data-row-${i}" data-row-idx="${i}">` +
         gripperSVG +
-        `<label class="bar-color-swatch-label" for="data-color-${i}">` +
-          `<input type="color" class="bar-color-input" id="data-color-${i}" data-bar-idx="${i}" value="${color}">` +
-        `</label>` +
+        `<button class="bar-color-swatch-btn" data-swatch="${i}" style="background:${color};" title="Choose colour"></button>` +
+        `<input type="color" class="bar-color-input" id="data-color-${i}" data-bar-idx="${i}" value="${color}">` +
         `<button class="color-reset-btn" data-reset="${i}" title="Reset to theme colour"${hasCustom ? '' : ' style="visibility:hidden"'}>↺</button>` +
         inputs +
         `<button class="data-del-btn" data-del="${i}" title="Remove">×</button>` +
@@ -700,15 +704,44 @@
       `<button class="builder-back-link" onclick="openDataModal()">Edit data</button>` +
     `</div>`;
 
-    // Colour picker
+    // Colour picker — native input (used by "Custom…" fallback)
     el.querySelectorAll('.bar-color-input').forEach(input => {
       input.addEventListener('input', e => {
         bState.options.barColors[parseInt(e.target.dataset.barIdx)] = e.target.value;
         rerender();
       });
-      input.addEventListener('click', e => {
-        const i = parseInt(e.target.dataset.barIdx);
+    });
+
+    // Colour swatch button — show theme palette preset popup
+    el.querySelectorAll('.bar-color-swatch-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        _dismissColorPopup();
+        const i = parseInt(btn.dataset.swatch);
         if (bState.options.selectedBar !== i) selectBar(i, false);
+        const palette = bState.theme.palette;
+        const popup = document.createElement('div');
+        popup.className = 'color-preset-popup';
+        popup.innerHTML =
+          `<div class="color-preset-dots">${palette.map(c => `<button class="color-preset-dot" data-color="${c}" style="background:${c};" title="${c}"></button>`).join('')}</div>` +
+          `<button class="color-preset-custom">Custom…</button>`;
+        document.body.appendChild(popup);
+        _colorPopup = popup;
+        const r = btn.getBoundingClientRect();
+        popup.style.left = Math.max(8, r.left) + 'px';
+        popup.style.top  = (r.bottom + 6) + 'px';
+        popup.querySelectorAll('.color-preset-dot').forEach(dot => {
+          dot.addEventListener('click', () => {
+            bState.options.barColors[i] = dot.dataset.color;
+            _dismissColorPopup();
+            rerender();
+            populateDataDisplay();
+          });
+        });
+        popup.querySelector('.color-preset-custom').addEventListener('click', () => {
+          _dismissColorPopup();
+          document.querySelector(`.bar-color-input[data-bar-idx="${i}"]`)?.click();
+        });
       });
     });
 
