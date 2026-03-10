@@ -333,7 +333,7 @@ const CHART_SCHEMAS = {
   'bubble-chart': {
     name: 'Bubble Chart',
     dataShape: 'xy-size',
-    builderReady: false,
+    builderReady: true,
     columns: [
       { key: 'x',     label: 'X',     type: 'number', required: true,  example: '24'     },
       { key: 'y',     label: 'Y',     type: 'number', required: true,  example: '35'     },

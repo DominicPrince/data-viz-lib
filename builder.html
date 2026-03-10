@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bar Chart Builder — data-viz-lib</title>
+  <title>Chart Builder — data-viz-lib</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@600;700&display=swap" />
@@ -18,7 +18,7 @@
       </svg>
       Library
     </a>
-    <span class="builder-header-title">Bar Chart Builder</span>
+    <span class="builder-header-title" id="builder-title">Chart Builder</span>
     <span></span>
   </header>
 
@@ -80,6 +80,14 @@
             <input type="number" class="axis-range-input" id="b-ymin" placeholder="Auto" />
             <span class="axis-range-sep">–</span>
             <input type="number" class="axis-range-input" id="b-ymax" placeholder="Auto" />
+          </div>
+        </div>
+        <div class="config-field" id="axes-xrange-field" hidden>
+          <label>X-axis range</label>
+          <div class="axis-range-row">
+            <input type="number" class="axis-range-input" id="b-xmin" placeholder="Auto" />
+            <span class="axis-range-sep">–</span>
+            <input type="number" class="axis-range-input" id="b-xmax" placeholder="Auto" />
           </div>
         </div>
       </div>
@@ -190,6 +198,7 @@
     </div>
   </div>
 
+  <script src="schemas.js"></script>
   <script>
   /* ─────────────────────────────────────────────────────────
      Self-contained helpers (copied from app.js)
@@ -275,7 +284,7 @@
     const textColor = options?.fontColor || tok.textColor;
 
     // Scale — respect custom yMin/yMax if provided
-    const dataMax = Math.max(...data.map(d => d.v), 1); // floor of 1 avoids division-by-zero on all-zero data
+    const dataMax = Math.max(...data.map(d => d.value), 1); // floor of 1 avoids division-by-zero on all-zero data
     const yMaxOpt = options?.yMax !== '' && options?.yMax !== undefined && !isNaN(+options.yMax) ? +options.yMax : null;
     const yMinOpt = options?.yMin !== '' && options?.yMin !== undefined && !isNaN(+options.yMin) ? +options.yMin : 0;
     const { max, ticks } = yMaxOpt !== null ? customScale(yMinOpt, yMaxOpt) : niceScale(dataMax);
@@ -287,7 +296,7 @@
     // Pre-compute wrapped labels so we can dynamically size pad.bottom
     const labelMaxW = Math.max(slot - 8, 20);
     const wrappedLabels = data.map(d =>
-      axisLabels ? wrapSVGText(d.l, labelMaxW, 11, false, font).slice(0, 3) : []
+      axisLabels ? wrapSVGText(d.label, labelMaxW, 11, false, font).slice(0, 3) : []
     );
     const maxLabelLines = Math.max(...wrappedLabels.map(ls => ls.length), 1);
     pad.bottom = Math.max(40, 24 + maxLabelLines * 13);
@@ -313,7 +322,7 @@
       : '';
 
     const bars = data.map((d, i) => {
-      const x = xMid(i) - bW / 2, y = yV(d.v), h = yBase - y;
+      const x = xMid(i) - bW / 2, y = yV(d.value), h = yBase - y;
       const fill = options?.barColors?.[i] || c0;
       const isSelected = options?.selectedBar === i;
       const bar = r === 0 || h <= r
@@ -345,6 +354,99 @@
     }
 
     return (filterDef ? `<defs>${filterDef}</defs>` : '') + `${grid}<g${glowAttr}>${bars}</g>${axisLabelsSVG}`;
+  }
+
+  /* Bubble chart — data rows: { x, y, size, label } */
+  function renderBubbleChartInner(theme, data, chartStyle, options) {
+    const W = 560, H = 300;
+    const pad = { top: 16, right: 24, bottom: 44, left: 54 };
+    const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
+    const tok = chartTokens(effectiveTheme, chartStyle);
+    const { gridColor, baseColor, font, c0, gridDash, glow, axisLabels } = tok;
+    const textColor = options?.fontColor || tok.textColor;
+
+    if (!data.length) {
+      return `<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="13" font-family="${font}" fill="${textColor}">Add data points to see the chart</text>`;
+    }
+
+    const xs = data.map(d => +d.x || 0);
+    const ys = data.map(d => +d.y || 0);
+    const sizes = data.map(d => Math.max(+d.size || 1, 0.01));
+
+    // Build scales — respect custom min/max from options
+    const hasXMin = options?.xMin !== '' && options?.xMin !== undefined && !isNaN(+options.xMin);
+    const hasXMax = options?.xMax !== '' && options?.xMax !== undefined && !isNaN(+options.xMax);
+    const hasYMin = options?.yMin !== '' && options?.yMin !== undefined && !isNaN(+options.yMin);
+    const hasYMax = options?.yMax !== '' && options?.yMax !== undefined && !isNaN(+options.yMax);
+
+    const xDataMin = Math.min(...xs), xDataMax = Math.max(...xs);
+    const yDataMin = Math.min(...ys), yDataMax = Math.max(...ys);
+    const xPad = (xDataMax - xDataMin || 1) * 0.12;
+    const yPad = (yDataMax - yDataMin || 1) * 0.15;
+
+    const xMinS = hasXMin ? +options.xMin : xDataMin - xPad;
+    const xMaxS = hasXMax ? +options.xMax : xDataMax + xPad;
+    const yMinS = hasYMin ? +options.yMin : yDataMin - yPad;
+    const yMaxS = hasYMax ? +options.yMax : yDataMax + yPad;
+
+    const cW = W - pad.left - pad.right;
+    const cH = H - pad.top - pad.bottom;
+    const scX = x => pad.left + ((x - xMinS) / (xMaxS - xMinS)) * cW;
+    const scY = y => pad.top + cH - ((y - yMinS) / (yMaxS - yMinS)) * cH;
+
+    // Bubble radius: map sizes to 5–28px
+    const sMin = Math.min(...sizes), sMax = Math.max(...sizes);
+    const sRange = sMax - sMin || 1;
+    const rOf = s => 5 + ((s - sMin) / sRange) * 23;
+
+    const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+
+    // Axis ticks
+    const { ticks: xTicks } = customScale(xMinS, xMaxS, 4);
+    const { ticks: yTicks } = customScale(yMinS, yMaxS, 4);
+
+    const grid =
+      yTicks.map(t => {
+        const y = scY(t).toFixed(1);
+        const lbl = axisLabels ? `<text x="${pad.left - 8}" y="${(+y + 4).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">${fmtTick(t)}</text>` : '';
+        return `<line x1="${pad.left}" y1="${y}" x2="${W - pad.right}" y2="${y}" stroke="${t === 0 ? baseColor : gridColor}" stroke-width="1"${dash}/>${lbl}`;
+      }).join('') +
+      xTicks.map(t => {
+        const x = scX(t).toFixed(1);
+        const lbl = axisLabels ? `<text x="${x}" y="${(pad.top + cH + 16).toFixed(1)}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${fmtTick(t)}</text>` : '';
+        return `<line x1="${x}" y1="${pad.top}" x2="${x}" y2="${(pad.top + cH).toFixed(1)}" stroke="${t === 0 ? baseColor : gridColor}" stroke-width="1"${dash}/>${lbl}`;
+      }).join('');
+
+    const fid = glow ? 'bbl' + Math.random().toString(36).slice(2, 6) : '';
+    const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+
+    const bubbles = data.map((d, i) => {
+      const cx = scX(+d.x || 0), cy = scY(+d.y || 0);
+      const r  = rOf(Math.max(+d.size || 1, 0.01));
+      const fill = options?.barColors?.[i] || c0;
+      const isSelected = options?.selectedBar === i;
+
+      const circle = `<circle data-bar-idx="${i}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}" fill-opacity="0.72" stroke="${fill}" stroke-width="1.5"/>`;
+      const ring   = isSelected ? `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(r+4).toFixed(1)}" fill="none" stroke="${fill}" stroke-width="2" opacity="0.45"/>` : '';
+      const lbl    = d.label
+        ? `<text data-editable="bubble-label-${i}" x="${cx.toFixed(1)}" y="${(cy - r - 5).toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${escSVG(d.label)}</text>`
+        : `<rect data-editable="bubble-label-${i}" x="${(cx - 22).toFixed(1)}" y="${(cy - r - 16).toFixed(1)}" width="44" height="13" fill="transparent" style="cursor:text"/>`;
+
+      return circle + ring + lbl;
+    }).join('');
+
+    const glowAttr = glow ? ` filter="url(#${fid})"` : '';
+
+    let axisLabelsSVG = '';
+    if (options?.xLabel) {
+      axisLabelsSVG += `<text x="${(pad.left + cW / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(options.xLabel)}</text>`;
+    }
+    if (options?.yLabel) {
+      const cy = pad.top + cH / 2;
+      axisLabelsSVG += `<text text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}" transform="translate(12,${cy.toFixed(1)}) rotate(-90)">${escSVG(options.yLabel)}</text>`;
+    }
+
+    return (filterDef ? `<defs>${filterDef}</defs>` : '') + `${grid}<g${glowAttr}>${bubbles}</g>${axisLabelsSVG}`;
   }
 
   function escSVG(str) {
@@ -452,22 +554,49 @@
   ───────────────────────────────────────────────────────── */
 
   const saved = sessionStorage.getItem('builderState');
-  if (!saved) { window.location.href = 'index.html'; }
+  // Also accept ?chart=bubble-chart URL param to start a fresh builder without modal flow
+  const _urlChart = new URLSearchParams(window.location.search).get('chart');
+  if (!saved && !_urlChart) { window.location.href = 'index.html'; }
 
-  const loaded = JSON.parse(saved);
+  const loaded = saved ? JSON.parse(saved) : { chartId: _urlChart, data: [], theme: PRESETS.default, chartStyle: 'modern' };
+
+  const chartId = loaded.chartId || 'bar-chart';
+  const schema  = (typeof CHART_SCHEMAS !== 'undefined' && CHART_SCHEMAS[chartId]) || null;
+
   const bState = {
     data:       loaded.data       || [],
     theme:      loaded.theme      || PRESETS.default,
     chartStyle: loaded.chartStyle || 'modern',
-    options: { title: '', subtitle: '', source: '', logoDataUrl: null, xLabel: '', yLabel: '', fontColor: '', bgColor: '', logoSize: 12, barColors: [], selectedBar: -1, yMin: '', yMax: '' },
+    options: { title: '', subtitle: '', source: '', logoDataUrl: null, xLabel: '', yLabel: '', fontColor: '', bgColor: '', logoSize: 12, barColors: [], selectedBar: -1, yMin: '', yMax: '', xMin: '', xMax: '' },
   };
+
+  // Normalize legacy bar-chart data format { l, v } → { label, value }
+  if (chartId === 'bar-chart' && bState.data.length && bState.data[0].l !== undefined) {
+    bState.data = bState.data.map(r => ({ label: r.l ?? '', value: r.v ?? 0 }));
+  }
+
+  // Update page title from schema
+  const chartName = schema?.name || 'Chart';
+  document.title = chartName + ' Builder — data-viz-lib';
+  document.getElementById('builder-title').textContent = chartName + ' Builder';
+
+  // Show X-axis range controls when schema needs them (or always for bubble chart)
+  if (schema?.config?.axes?.xMin || schema?.config?.axes?.xMax || chartId === 'bubble-chart') {
+    const xrf = document.getElementById('axes-xrange-field');
+    if (xrf) xrf.hidden = false;
+  }
 
   let currentSVG = '';
   let _editActive = false; // suppresses rerender while an inline edit is open
 
   function rerender() {
     if (_editActive) return;
-    const inner = renderBarChartInner(bState.theme, bState.data, bState.chartStyle, bState.options);
+    let inner;
+    if (chartId === 'bubble-chart') {
+      inner = renderBubbleChartInner(bState.theme, bState.data, bState.chartStyle, bState.options);
+    } else {
+      inner = renderBarChartInner(bState.theme, bState.data, bState.chartStyle, bState.options);
+    }
     currentSVG = composeSVG(inner, bState);
     document.getElementById('builder-preview').innerHTML = currentSVG;
   }
@@ -496,23 +625,43 @@
   document.getElementById('b-theme').value = themeKey;
   document.getElementById('b-style').value = bState.chartStyle;
 
-  // Data section — inline editable rows with colour swatch
+  // Schema columns for the current chart (excludes multiple-series columns for now)
+  const _schemaCols = schema
+    ? schema.columns.filter(c => !c.multiple)
+    : [{ key: 'label', label: 'Label', type: 'string', required: true }, { key: 'value', label: 'Value', type: 'number', required: true }];
+
+  // Blank row keyed to current schema
+  function _blankRow() {
+    const r = {};
+    _schemaCols.forEach(c => { r[c.key] = c.type === 'number' ? 0 : ''; });
+    return r;
+  }
+
+  // Data section — schema-driven rows with colour swatch + drag handle
   function populateDataDisplay() {
     const el = document.getElementById('builder-data-display');
     const defaultColor = bState.theme.palette[0];
     const gripperSVG = `<svg class="drag-handle" viewBox="0 0 10 16" width="10" height="16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.2"/><circle cx="7" cy="3" r="1.2"/><circle cx="3" cy="8" r="1.2"/><circle cx="7" cy="8" r="1.2"/><circle cx="3" cy="13" r="1.2"/><circle cx="7" cy="13" r="1.2"/></svg>`;
+
     el.innerHTML = bState.data.map((row, i) => {
-      const color = bState.options.barColors[i] || defaultColor;
-      const sel = bState.options.selectedBar === i ? ' is-selected' : '';
-      const hasCustom = bState.options.barColors[i] != null && bState.options.barColors[i] !== '';
+      const color    = bState.options.barColors[i] || defaultColor;
+      const sel      = bState.options.selectedBar === i ? ' is-selected' : '';
+      const hasCustom= bState.options.barColors[i] != null && bState.options.barColors[i] !== '';
+      const inputs   = _schemaCols.map(col => {
+        const val  = row[col.key] ?? '';
+        const type = col.type === 'number' ? 'number' : 'text';
+        const cls  = col.type === 'number' ? 'data-value-input' : 'data-label-input';
+        return `<input type="${type}" class="${cls}" id="data-${col.key}-${i}" ` +
+               `data-col="${col.key}" data-row="${i}" value="${escAttr(String(val))}" ` +
+               `placeholder="${col.label}" step="any">`;
+      }).join('');
       return `<div class="data-row${sel}" id="data-row-${i}" data-row-idx="${i}">` +
         gripperSVG +
         `<label class="bar-color-swatch-label" for="data-color-${i}">` +
           `<input type="color" class="bar-color-input" id="data-color-${i}" data-bar-idx="${i}" value="${color}">` +
         `</label>` +
         `<button class="color-reset-btn" data-reset="${i}" title="Reset to theme colour"${hasCustom ? '' : ' style="visibility:hidden"'}>↺</button>` +
-        `<input type="text" class="data-label-input" id="data-label-${i}" value="${escAttr(row.l)}" placeholder="Label">` +
-        `<input type="number" class="data-value-input" id="data-val-${i}" value="${row.v}" step="any" placeholder="0">` +
+        inputs +
         `<button class="data-del-btn" data-del="${i}" title="Remove">×</button>` +
       `</div>`;
     }).join('') +
@@ -521,11 +670,10 @@
       `<button class="builder-back-link" onclick="openDataModal()">Import CSV</button>` +
     `</div>`;
 
-    // Colour picker — updates barColors on change, selects bar on click
+    // Colour picker
     el.querySelectorAll('.bar-color-input').forEach(input => {
       input.addEventListener('input', e => {
-        const i = parseInt(e.target.dataset.barIdx);
-        bState.options.barColors[i] = e.target.value;
+        bState.options.barColors[parseInt(e.target.dataset.barIdx)] = e.target.value;
         rerender();
       });
       input.addEventListener('click', e => {
@@ -534,18 +682,20 @@
       });
     });
 
-    // Label input — updates data label live
-    el.querySelectorAll('.data-label-input').forEach((input, i) => {
+    // Column inputs — schema-driven update
+    el.querySelectorAll('input[data-col]').forEach(input => {
       input.addEventListener('input', e => {
-        if (bState.data[i]) { bState.data[i].l = e.target.value; rerender(); }
-      });
-    });
-
-    // Value input — updates data value live
-    el.querySelectorAll('.data-value-input').forEach((input, i) => {
-      input.addEventListener('input', e => {
-        const v = parseFloat(e.target.value);
-        if (!isNaN(v) && bState.data[i]) { bState.data[i].v = v; rerender(); }
+        const col    = e.target.dataset.col;
+        const rowIdx = parseInt(e.target.dataset.row);
+        if (!bState.data[rowIdx]) return;
+        const colDef = _schemaCols.find(c => c.key === col);
+        if (colDef?.type === 'number') {
+          const v = parseFloat(e.target.value);
+          if (!isNaN(v)) bState.data[rowIdx][col] = v;
+        } else {
+          bState.data[rowIdx][col] = e.target.value;
+        }
+        rerender();
       });
     });
 
@@ -566,11 +716,12 @@
     const addBtn = document.getElementById('sidebar-add-row');
     if (addBtn) {
       addBtn.addEventListener('click', () => {
-        bState.data.push({ l: '', v: 0 });
+        bState.data.push(_blankRow());
         rerender();
         populateDataDisplay();
         setTimeout(() => {
-          const input = document.getElementById('data-label-' + (bState.data.length - 1));
+          const firstCol = _schemaCols[0]?.key || 'label';
+          const input = document.getElementById(`data-${firstCol}-${bState.data.length - 1}`);
           if (input) { input.focus(); input.select(); }
         }, 30);
       });
@@ -688,13 +839,15 @@
     // Only one edit at a time
     if (_editActive) return;
 
+    const _itemLabelMatch = fieldKey.match(/^(?:bar|bubble)-label-(\d+)$/);
+
     const getVal = () => {
       if (fieldKey === 'title')    return bState.options.title;
       if (fieldKey === 'subtitle') return bState.options.subtitle;
       if (fieldKey === 'source')   return bState.options.source;
-      if (fieldKey.startsWith('bar-label-')) {
-        const idx = parseInt(fieldKey.slice(10));
-        return bState.data[idx]?.l || '';
+      if (_itemLabelMatch) {
+        const idx = parseInt(_itemLabelMatch[1]);
+        return bState.data[idx]?.label || '';
       }
       return '';
     };
@@ -703,9 +856,9 @@
       if (fieldKey === 'title')    { bState.options.title = val;    const e = document.getElementById('b-title');    if (e) { e.value = val; taAutoH(e); } }
       if (fieldKey === 'subtitle') { bState.options.subtitle = val; const e = document.getElementById('b-subtitle'); if (e) { e.value = val; taAutoH(e); } }
       if (fieldKey === 'source')   { bState.options.source = val;   const e = document.getElementById('b-source');   if (e) { e.value = val; taAutoH(e); } }
-      if (fieldKey.startsWith('bar-label-')) {
-        const idx = parseInt(fieldKey.slice(10));
-        if (bState.data[idx]) bState.data[idx].l = val;
+      if (_itemLabelMatch) {
+        const idx = parseInt(_itemLabelMatch[1]);
+        if (bState.data[idx]) bState.data[idx].label = val;
         const e = document.getElementById('data-label-' + idx);
         if (e) e.value = val;
       }
@@ -740,8 +893,8 @@
 
     // Wrap at the same max-width used by the SVG renderer so the editor
     // matches the chart layout exactly for all field types
-    const isBarLabel = fieldKey.startsWith('bar-label-');
-    const svgMaxW    = isBarLabel ? Math.max((494 / bState.data.length) - 8, 20) : 512;
+    const isItemLabel = _itemLabelMatch !== null;
+    const svgMaxW    = isItemLabel ? Math.max((494 / bState.data.length) - 8, 20) : 512;
     const maxWidthPx = Math.round(svgMaxW * ctm.a);
 
     const editor = document.createElement('div');
@@ -832,6 +985,8 @@
   document.getElementById('b-ylabel').addEventListener('input', e => { bState.options.yLabel = e.target.value; rerender(); });
   document.getElementById('b-ymin').addEventListener('input', e => { bState.options.yMin = e.target.value; rerender(); });
   document.getElementById('b-ymax').addEventListener('input', e => { bState.options.yMax = e.target.value; rerender(); });
+  document.getElementById('b-xmin').addEventListener('input', e => { bState.options.xMin = e.target.value; rerender(); });
+  document.getElementById('b-xmax').addEventListener('input', e => { bState.options.xMax = e.target.value; rerender(); });
 
   document.getElementById('b-theme').addEventListener('change', e => {
     bState.theme = PRESETS[e.target.value] || PRESETS.default;
@@ -970,23 +1125,37 @@
     const lines = text.trim().split('\n').filter(l => l.trim());
     if (!lines.length) return [];
     const rows = lines.map(l => l.split(',').map(s => s.trim()));
-    const hasHeader = isNaN(rows[0]?.[1]);
+    // Detect header: any numeric column that has a non-numeric value in row 0
+    const numericIdxs = _schemaCols.map((c, i) => c.type === 'number' ? i : -1).filter(i => i >= 0);
+    const hasHeader = numericIdxs.length ? numericIdxs.some(i => isNaN(rows[0]?.[i])) : isNaN(rows[0]?.[1]);
     const dataRows = hasHeader ? rows.slice(1) : rows;
     return dataRows
-      .map(r => ({ l: r[0] || '', v: parseFloat(r[1]) }))
-      .filter(r => r.l && !isNaN(r.v));
+      .map(r => {
+        const row = {};
+        _schemaCols.forEach((col, i) => {
+          row[col.key] = col.type === 'number' ? parseFloat(r[i]) : (r[i] || '');
+        });
+        return row;
+      })
+      .filter(r => _schemaCols.filter(c => c.required).every(c =>
+        c.type === 'number' ? !isNaN(r[c.key]) : r[c.key] !== ''
+      ));
   }
 
   function dataToCSV(data) {
-    return 'Label,Value\n' + data.map(r => `${r.l},${r.v}`).join('\n');
+    const header = _schemaCols.map(c => c.label).join(',');
+    return header + '\n' + data.map(r => _schemaCols.map(c => r[c.key] ?? '').join(',')).join('\n');
   }
 
-  function dmAddRow(tbody, label, value) {
+  function dmAddRow(tbody, rowData) {
     const tr = document.createElement('tr');
-    tr.innerHTML =
-      `<td><input class="manual-cell" type="text" placeholder="Label" value="${escAttr(label || '')}"></td>` +
-      `<td><input class="manual-cell" type="number" placeholder="0" value="${value !== undefined && value !== '' ? value : ''}"></td>` +
-      `<td><button class="manual-del-btn" title="Remove">×</button></td>`;
+    const cells = _schemaCols.map(col => {
+      const val = rowData?.[col.key] ?? '';
+      const type = col.type === 'number' ? 'number' : 'text';
+      const displayVal = val !== '' ? escAttr(String(val)) : '';
+      return `<td><input class="manual-cell" type="${type}" placeholder="${escAttr(col.label)}" value="${displayVal}" step="any"></td>`;
+    }).join('');
+    tr.innerHTML = cells + `<td><button class="manual-del-btn" title="Remove">×</button></td>`;
     tr.querySelector('.manual-del-btn').addEventListener('click', () => { tr.remove(); dmSyncManual(); });
     tr.querySelectorAll('.manual-cell').forEach(inp => inp.addEventListener('input', dmSyncManual));
     tbody.appendChild(tr);
@@ -996,9 +1165,15 @@
     const rows = [];
     document.querySelectorAll('#dm-manual-tbody tr').forEach(tr => {
       const cells = tr.querySelectorAll('.manual-cell');
-      const l = cells[0]?.value.trim();
-      const v = parseFloat(cells[1]?.value);
-      if (l && !isNaN(v)) rows.push({ l, v });
+      const row = {};
+      _schemaCols.forEach((col, i) => {
+        const val = cells[i]?.value;
+        row[col.key] = col.type === 'number' ? parseFloat(val) : (val?.trim() || '');
+      });
+      const reqValid = _schemaCols.filter(c => c.required).every(c =>
+        c.type === 'number' ? !isNaN(row[c.key]) : row[c.key] !== ''
+      );
+      if (reqValid) rows.push(row);
     });
     if (rows.length) dmApplyData(rows);
   }
@@ -1019,13 +1194,24 @@
   }
 
   function openDataModal() {
+    // Update table headers from schema
+    const thead = document.querySelector('#dm-manual-table thead tr');
+    if (thead) thead.innerHTML = _schemaCols.map(c => `<th>${c.label}</th>`).join('') + '<th></th>';
+
+    // Update CSV paste placeholder from schema
+    const pasteTA = document.getElementById('dm-csv-paste');
+    if (pasteTA) {
+      const exRow = _schemaCols.map(c => c.example ?? (c.type === 'number' ? '0' : 'Item')).join(',');
+      pasteTA.placeholder = _schemaCols.map(c => c.label).join(',') + '\n' + exRow;
+    }
+
     // Pre-populate Manual table
     const tbody = document.getElementById('dm-manual-tbody');
     tbody.innerHTML = '';
     if (bState.data.length) {
-      bState.data.forEach(r => dmAddRow(tbody, r.l, r.v));
+      bState.data.forEach(r => dmAddRow(tbody, r));
     } else {
-      dmAddRow(tbody, '', '');
+      dmAddRow(tbody, null);
     }
     // Pre-populate Paste textarea
     document.getElementById('dm-csv-paste').value = bState.data.length ? dataToCSV(bState.data) : '';
@@ -1056,7 +1242,7 @@
 
   // Manual table — add row
   document.getElementById('dm-add-row-btn').addEventListener('click', () => {
-    dmAddRow(document.getElementById('dm-manual-tbody'), '', '');
+    dmAddRow(document.getElementById('dm-manual-tbody'), null);
   });
 
   // File upload

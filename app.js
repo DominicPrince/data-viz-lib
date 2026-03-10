@@ -3453,16 +3453,27 @@ function renderCustomChart(vizId, container, theme) {
 /* ── Build tab ───────────────────────────────────────────────────────────── */
 let currentBuildData = [];
 let buildListenersReady = false;
+let _buildSchemaCols = [
+  { key: 'label', label: 'Category', type: 'string', required: true, example: 'Apples' },
+  { key: 'value', label: 'Value',    type: 'number', required: true, example: '85'     },
+];
 
-function parseCSV(text) {
+function _buildParseCSV(text) {
   const lines = text.trim().split('\n').filter(l => l.trim());
   if (!lines.length) return [];
   const rows = lines.map(l => l.split(',').map(s => s.trim()));
-  const hasHeader = isNaN(parseFloat(rows[0]?.[1]));
+  const numericIdxs = _buildSchemaCols.map((c, i) => c.type === 'number' ? i : -1).filter(i => i >= 0);
+  const hasHeader = numericIdxs.length ? numericIdxs.some(i => isNaN(rows[0]?.[i])) : isNaN(parseFloat(rows[0]?.[1]));
   const dataRows = hasHeader ? rows.slice(1) : rows;
   return dataRows
-    .map(r => ({ l: r[0] || '', v: parseFloat(r[1]) }))
-    .filter(r => r.l && !isNaN(r.v));
+    .map(r => {
+      const row = {};
+      _buildSchemaCols.forEach((col, i) => { row[col.key] = col.type === 'number' ? parseFloat(r[i]) : (r[i] || ''); });
+      return row;
+    })
+    .filter(r => _buildSchemaCols.filter(c => c.required).every(c =>
+      c.type === 'number' ? !isNaN(r[c.key]) : r[c.key] !== ''
+    ));
 }
 
 function onBuildDataChange(rows) {
@@ -3470,14 +3481,25 @@ function onBuildDataChange(rows) {
   const btn = document.getElementById('build-chart-btn');
   if (btn) btn.disabled = rows.length < 2;
   const preview = document.getElementById('build-tab-preview');
-  if (preview) preview.innerHTML = rows.length >= 2 ? renderBarChartSVG(state.theme, rows) : '';
+  if (preview) {
+    if (rows.length >= 2 && state.openVizId === 'bar-chart') {
+      // Bar chart preview uses legacy label-value rows
+      preview.innerHTML = renderBarChartSVG(state.theme, rows.map(r => ({ l: r.label, v: r.value })));
+    } else {
+      preview.innerHTML = '';
+    }
+  }
 }
 
-function addManualRow(tbody, label, value) {
+function addManualRow(tbody, rowData) {
   const tr = document.createElement('tr');
-  const lv = label !== undefined ? String(label).replace(/"/g, '&quot;') : '';
-  const vv = value !== undefined ? value : '';
-  tr.innerHTML = `<td><input class="manual-cell" type="text" placeholder="Label" value="${lv}"/></td><td><input class="manual-cell manual-cell--num" type="number" placeholder="0" value="${vv}"/></td><td><button class="manual-del-btn" aria-label="Remove row">×</button></td>`;
+  const cells = _buildSchemaCols.map(col => {
+    const val = rowData?.[col.key] ?? '';
+    const type = col.type === 'number' ? 'number' : 'text';
+    const displayVal = val !== '' ? String(val).replace(/"/g, '&quot;') : '';
+    return `<td><input class="manual-cell${type === 'number' ? ' manual-cell--num' : ''}" type="${type}" placeholder="${col.label}" value="${displayVal}"/></td>`;
+  }).join('');
+  tr.innerHTML = cells + `<td><button class="manual-del-btn" aria-label="Remove row">×</button></td>`;
   tr.querySelector('.manual-del-btn').addEventListener('click', () => { tr.remove(); syncManualData(); });
   tr.querySelectorAll('.manual-cell').forEach(inp => inp.addEventListener('input', syncManualData));
   tbody.appendChild(tr);
@@ -3486,12 +3508,38 @@ function addManualRow(tbody, label, value) {
 function syncManualData() {
   const rows = [...document.querySelectorAll('#manual-table tbody tr')].map(tr => {
     const cells = tr.querySelectorAll('.manual-cell');
-    return { l: cells[0].value.trim(), v: parseFloat(cells[1].value) };
-  }).filter(r => r.l && !isNaN(r.v));
+    const row = {};
+    _buildSchemaCols.forEach((col, i) => {
+      const val = cells[i]?.value;
+      row[col.key] = col.type === 'number' ? parseFloat(val) : (val?.trim() || '');
+    });
+    return row;
+  }).filter(r => _buildSchemaCols.filter(c => c.required).every(c =>
+    c.type === 'number' ? !isNaN(r[c.key]) : r[c.key] !== ''
+  ));
   onBuildDataChange(rows);
 }
 
 function initBuildTab() {
+  // Load schema for current chart
+  const schema = typeof CHART_SCHEMAS !== 'undefined' ? CHART_SCHEMAS[state.openVizId] : null;
+  _buildSchemaCols = schema
+    ? schema.columns.filter(c => !c.multiple)
+    : [{ key: 'label', label: 'Category', type: 'string', required: true, example: 'Apples' },
+       { key: 'value', label: 'Value',    type: 'number', required: true, example: '85'     }];
+
+  // Update manual table headers
+  const thead = document.querySelector('#manual-table thead tr');
+  if (thead) thead.innerHTML = _buildSchemaCols.map(c => `<th>${c.label}</th>`).join('') + '<th></th>';
+
+  // Update CSV paste placeholder
+  const csvPaste = document.getElementById('csv-paste');
+  if (csvPaste) {
+    const exRow = _buildSchemaCols.map(c => c.example ?? (c.type === 'number' ? '0' : 'Item')).join(',');
+    csvPaste.placeholder = _buildSchemaCols.map(c => c.label).join(',') + '\n' + exRow;
+    csvPaste.value = '';
+  }
+
   // Reset UI state
   currentBuildData = [];
   const preview = document.getElementById('build-tab-preview');
@@ -3505,15 +3553,18 @@ function initBuildTab() {
   $('input-upload').hidden = true;
   $('input-manual').hidden = true;
 
-  const csvPaste = document.getElementById('csv-paste');
-  if (csvPaste) csvPaste.value = '';
-
+  // Seed manual table with example rows
   const tbody = document.querySelector('#manual-table tbody');
   if (tbody) {
     tbody.innerHTML = '';
-    addManualRow(tbody, 'Category A', 85);
-    addManualRow(tbody, 'Category B', 62);
-    addManualRow(tbody, 'Category C', 108);
+    // Two starter rows using schema examples
+    for (let i = 0; i < 2; i++) {
+      const row = {};
+      _buildSchemaCols.forEach(c => {
+        row[c.key] = c.type === 'number' ? (parseFloat(c.example) || 0) : (i === 0 ? (c.example || '') : '');
+      });
+      addManualRow(tbody, row);
+    }
   }
 
   const fileInput = document.getElementById('csv-file-input');
@@ -3532,13 +3583,13 @@ function initBuildTab() {
       $('input-paste').hidden = mode !== 'paste';
       $('input-upload').hidden = mode !== 'upload';
       $('input-manual').hidden = mode !== 'manual';
-      if (mode === 'paste') onBuildDataChange(parseCSV(document.getElementById('csv-paste').value));
+      if (mode === 'paste') onBuildDataChange(_buildParseCSV(document.getElementById('csv-paste').value));
       else if (mode === 'manual') syncManualData();
     });
   });
 
   // Paste CSV
-  document.getElementById('csv-paste').addEventListener('input', e => onBuildDataChange(parseCSV(e.target.value)));
+  document.getElementById('csv-paste').addEventListener('input', e => onBuildDataChange(_buildParseCSV(e.target.value)));
 
   // File upload
   document.getElementById('csv-file-input').addEventListener('change', e => {
@@ -3546,7 +3597,7 @@ function initBuildTab() {
     const fn = document.getElementById('upload-filename');
     fn.textContent = file.name; fn.hidden = false;
     const reader = new FileReader();
-    reader.onload = ev => onBuildDataChange(parseCSV(ev.target.result));
+    reader.onload = ev => onBuildDataChange(_buildParseCSV(ev.target.result));
     reader.readAsText(file);
   });
 
@@ -3560,13 +3611,13 @@ function initBuildTab() {
     const fn = document.getElementById('upload-filename');
     fn.textContent = file.name; fn.hidden = false;
     const reader = new FileReader();
-    reader.onload = ev => onBuildDataChange(parseCSV(ev.target.result));
+    reader.onload = ev => onBuildDataChange(_buildParseCSV(ev.target.result));
     reader.readAsText(file);
   });
 
   // Add row
   document.getElementById('add-row-btn').addEventListener('click', () => {
-    addManualRow(document.querySelector('#manual-table tbody'));
+    addManualRow(document.querySelector('#manual-table tbody'), null);
     syncManualData();
   });
 
@@ -3590,11 +3641,12 @@ function openModal(vizId) {
 
   state.openVizId = vizId;
 
-  // Enable Build tab for bar-chart only; always reset to Explore tab
+  // Enable Build tab for any builderReady chart
   const _buildTab = document.querySelector('.modal-tab[data-tab="build"]');
   const _soonPill = _buildTab.querySelector('.coming-soon-pill');
-  _buildTab.disabled = vizId !== 'bar-chart';
-  if (_soonPill) _soonPill.style.display = vizId !== 'bar-chart' ? '' : 'none';
+  const _builderReady = typeof CHART_SCHEMAS !== 'undefined' && CHART_SCHEMAS[vizId]?.builderReady;
+  _buildTab.disabled = !_builderReady;
+  if (_soonPill) _soonPill.style.display = _builderReady ? 'none' : '';
   document.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'explore'));
   $('modal-tab-explore').hidden = false;
   $('modal-tab-build').hidden = true;
