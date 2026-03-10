@@ -608,6 +608,7 @@
 
   let currentSVG = '';
   let _editActive = false; // suppresses rerender while an inline edit is open
+  let _dmBusy = false;    // suppresses dmSyncManual during modal setup
 
   function rerender() {
     if (_editActive) return;
@@ -682,12 +683,12 @@
         `</label>` +
         `<button class="color-reset-btn" data-reset="${i}" title="Reset to theme colour"${hasCustom ? '' : ' style="visibility:hidden"'}>↺</button>` +
         inputs +
-        `<button class="data-del-btn" data-del="${i}" title="Remove">×</button>` +
+        `<button class="data-del-btn" data-del="${i}" title="Remove"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 3h8M5 3V2h2v1M4.5 3l.5 6.5h2L7.5 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` +
       `</div>`;
     }).join('') +
     `<div class="data-section-footer">` +
       `<button class="add-row-btn" id="sidebar-add-row">+ Add row</button>` +
-      `<button class="builder-back-link" onclick="openDataModal()">Import CSV</button>` +
+      `<button class="builder-back-link" onclick="openDataModal()">Edit data</button>` +
     `</div>`;
 
     // Colour picker
@@ -1182,6 +1183,7 @@
   }
 
   function dmSyncManual() {
+    if (_dmBusy) return;
     const rows = [];
     document.querySelectorAll('#dm-manual-tbody tr').forEach(tr => {
       const cells = tr.querySelectorAll('.manual-cell');
@@ -1214,6 +1216,7 @@
   }
 
   function openDataModal() {
+    _dmBusy = true;
     // Update table headers from schema
     const thead = document.querySelector('#dm-manual-table thead tr');
     if (thead) thead.innerHTML = _schemaCols.map(c => {
@@ -1243,6 +1246,7 @@
     // Clear upload filename
     document.getElementById('dm-upload-filename').hidden = true;
     document.getElementById('dm-upload-filename').textContent = '';
+    _dmBusy = false;
     document.getElementById('data-edit-modal').hidden = false;
     document.body.style.overflow = 'hidden';
   }

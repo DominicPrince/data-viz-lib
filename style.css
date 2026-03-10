@@ -1688,7 +1688,7 @@ body.sidebar-open .main {
   line-height: 1;
   cursor: pointer;
   padding: 0;
-  opacity: 0;
+  opacity: 0.35;
   transition: opacity 0.1s, background 0.1s, color 0.1s;
 }
 .data-row:hover .data-del-btn { opacity: 1; }
