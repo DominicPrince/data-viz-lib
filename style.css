@@ -1149,7 +1149,7 @@ body.sidebar-open .main {
 }
 
 .builder-config {
-  width: 300px;
+  width: 360px;
   flex-shrink: 0;
   border-right: 1.5px solid var(--color-border);
   overflow-y: auto;
@@ -1695,6 +1695,48 @@ body.sidebar-open .main {
 .data-del-btn:hover {
   background: var(--color-border);
   color: var(--color-text);
+}
+
+/* Delete confirm popover */
+.del-confirm-popup {
+  position: fixed;
+  background: var(--color-surface, #fff);
+  border: 1.5px solid var(--color-border, #DDD9D3);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.14);
+  padding: 12px 14px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 160px;
+}
+.del-confirm-popup p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text, #1C1A17);
+}
+.del-confirm-btns {
+  display: flex;
+  gap: 6px;
+}
+.del-confirm-btns button {
+  flex: 1;
+  padding: 5px 0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+}
+.del-confirm-do {
+  background: #ff3b30;
+  color: #fff;
+}
+.del-confirm-cancel {
+  background: var(--color-border, #DDD9D3);
+  color: var(--color-text, #1C1A17);
 }
 
 .data-section-footer {

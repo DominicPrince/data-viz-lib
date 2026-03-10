@@ -428,9 +428,13 @@
 
       const circle = `<circle data-bar-idx="${i}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}" fill-opacity="0.72" stroke="${fill}" stroke-width="1.5"/>`;
       const ring   = isSelected ? `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(r+4).toFixed(1)}" fill="none" stroke="${fill}" stroke-width="2" opacity="0.45"/>` : '';
+      const labelAboveY = cy - r - 5;
+      const below = labelAboveY < pad.top + 10;
+      const lblY  = below ? cy + r + 14 : labelAboveY;
+      const rectY = below ? cy + r + 3  : cy - r - 16;
       const lbl    = d.label
-        ? `<text data-editable="bubble-label-${i}" x="${cx.toFixed(1)}" y="${(cy - r - 5).toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${escSVG(d.label)}</text>`
-        : `<rect data-editable="bubble-label-${i}" x="${(cx - 22).toFixed(1)}" y="${(cy - r - 16).toFixed(1)}" width="44" height="13" fill="transparent" style="cursor:text"/>`;
+        ? `<text data-editable="bubble-label-${i}" x="${cx.toFixed(1)}" y="${lblY.toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${escSVG(d.label)}</text>`
+        : `<rect data-editable="bubble-label-${i}" x="${(cx - 22).toFixed(1)}" y="${rectY.toFixed(1)}" width="44" height="13" fill="transparent" style="cursor:text"/>`;
 
       return circle + ring + lbl;
     }).join('');
@@ -658,6 +662,11 @@
     return r;
   }
 
+  // Delete-row confirm popover (global so it survives re-renders)
+  let _delPopup = null;
+  function _dismissDelPopup() { if (_delPopup) { _delPopup.remove(); _delPopup = null; } }
+  document.addEventListener('click', e => { if (_delPopup && !_delPopup.contains(e.target)) _dismissDelPopup(); });
+
   // Data section — schema-driven rows with colour swatch + drag handle
   function populateDataDisplay() {
     const el = document.getElementById('builder-data-display');
@@ -720,16 +729,31 @@
       });
     });
 
-    // Delete buttons
+    // Delete buttons — show confirm popover before removing
     el.querySelectorAll('[data-del]').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        _dismissDelPopup();
         const i = parseInt(btn.dataset.del);
-        bState.data.splice(i, 1);
-        bState.options.barColors.splice(i, 1);
-        if (bState.options.selectedBar === i) bState.options.selectedBar = -1;
-        else if (bState.options.selectedBar > i) bState.options.selectedBar--;
-        rerender();
-        populateDataDisplay();
+        const popup = document.createElement('div');
+        popup.className = 'del-confirm-popup';
+        popup.innerHTML = `<p>Remove this row?</p><div class="del-confirm-btns"><button class="del-confirm-do">Delete</button><button class="del-confirm-cancel">Cancel</button></div>`;
+        document.body.appendChild(popup);
+        _delPopup = popup;
+        // Position above the button
+        const r = btn.getBoundingClientRect();
+        popup.style.left = Math.max(8, r.left + r.width / 2 - popup.offsetWidth / 2) + 'px';
+        popup.style.top  = (r.top - popup.offsetHeight - 8) + 'px';
+        popup.querySelector('.del-confirm-do').addEventListener('click', () => {
+          _dismissDelPopup();
+          bState.data.splice(i, 1);
+          bState.options.barColors.splice(i, 1);
+          if (bState.options.selectedBar === i) bState.options.selectedBar = -1;
+          else if (bState.options.selectedBar > i) bState.options.selectedBar--;
+          rerender();
+          populateDataDisplay();
+        });
+        popup.querySelector('.del-confirm-cancel').addEventListener('click', _dismissDelPopup);
       });
     });
 
