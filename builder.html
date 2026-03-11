@@ -359,7 +359,6 @@
   /* Bubble chart — data rows: { x, y, size, label } */
   function renderBubbleChartInner(theme, data, chartStyle, options) {
     const W = 560, H = 300;
-    const pad = { top: 16, right: 24, bottom: 44, left: 54 };
     const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
     const tok = chartTokens(effectiveTheme, chartStyle);
     const { gridColor, baseColor, font, c0, gridDash, glow, axisLabels } = tok;
@@ -372,6 +371,14 @@
     const xs = data.map(d => +d.x || 0);
     const ys = data.map(d => +d.y || 0);
     const sizes = data.map(d => Math.max(+d.size || 1, 0.01));
+
+    // Compute bubble radii before pad so maxR can inform overflow padding
+    const sMin = Math.min(...sizes), sMax = Math.max(...sizes);
+    const sRange = sMax - sMin || 1;
+    const rOf = s => 5 + ((s - sMin) / sRange) * 23;
+    const maxR = Math.ceil(rOf(sMax));
+
+    const pad = { top: 12 + maxR, right: 12 + maxR, bottom: 44, left: 54 };
 
     // Build scales — respect custom min/max from options
     const hasXMin = options?.xMin !== '' && options?.xMin !== undefined && !isNaN(+options.xMin);
@@ -393,11 +400,6 @@
     const cH = H - pad.top - pad.bottom;
     const scX = x => pad.left + ((x - xMinS) / (xMaxS - xMinS)) * cW;
     const scY = y => pad.top + cH - ((y - yMinS) / (yMaxS - yMinS)) * cH;
-
-    // Bubble radius: map sizes to 5–28px
-    const sMin = Math.min(...sizes), sMax = Math.max(...sizes);
-    const sRange = sMax - sMin || 1;
-    const rOf = s => 5 + ((s - sMin) / sRange) * 23;
 
     const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
 
@@ -693,7 +695,6 @@
       return `<div class="data-row${sel}" id="data-row-${i}" data-row-idx="${i}">` +
         gripperSVG +
         `<button class="bar-color-swatch-btn" data-swatch="${i}" style="background:${color};" title="Choose colour"></button>` +
-        `<input type="color" class="bar-color-input" id="data-color-${i}" data-bar-idx="${i}" value="${color}">` +
         `<button class="color-reset-btn" data-reset="${i}" title="Reset to theme colour"${hasCustom ? '' : ' style="visibility:hidden"'}>↺</button>` +
         inputs +
         `<button class="data-del-btn" data-del="${i}" title="Remove">×</button>` +
@@ -703,14 +704,6 @@
       `<button class="add-row-btn" id="sidebar-add-row">+ Add row</button>` +
       `<button class="builder-back-link" onclick="openDataModal()">Edit data</button>` +
     `</div>`;
-
-    // Colour picker — native input (used by "Custom…" fallback)
-    el.querySelectorAll('.bar-color-input').forEach(input => {
-      input.addEventListener('input', e => {
-        bState.options.barColors[parseInt(e.target.dataset.barIdx)] = e.target.value;
-        rerender();
-      });
-    });
 
     // Colour swatch button — show theme palette preset popup
     el.querySelectorAll('.bar-color-swatch-btn').forEach(btn => {
@@ -722,9 +715,10 @@
         const palette = bState.theme.palette;
         const popup = document.createElement('div');
         popup.className = 'color-preset-popup';
+        const currentColor = bState.options.barColors[i] || defaultColor;
         popup.innerHTML =
           `<div class="color-preset-dots">${palette.map(c => `<button class="color-preset-dot" data-color="${c}" style="background:${c};" title="${c}"></button>`).join('')}</div>` +
-          `<button class="color-preset-custom">Custom…</button>`;
+          `<label class="color-preset-custom">Custom…<input type="color" class="color-preset-native" value="${currentColor}"></label>`;
         document.body.appendChild(popup);
         _colorPopup = popup;
         const r = btn.getBoundingClientRect();
@@ -738,15 +732,15 @@
             populateDataDisplay();
           });
         });
-        popup.querySelector('.color-preset-custom').addEventListener('click', () => {
+        const nativePicker = popup.querySelector('.color-preset-native');
+        nativePicker.addEventListener('input', e => {
+          bState.options.barColors[i] = e.target.value;
+          btn.style.background = e.target.value;
+          rerender();
+        });
+        nativePicker.addEventListener('change', () => {
           _dismissColorPopup();
-          const picker = document.querySelector(`.bar-color-input[data-bar-idx="${i}"]`);
-          if (picker) {
-            const r = btn.getBoundingClientRect();
-            picker.style.top  = r.bottom + 'px';
-            picker.style.left = r.left + 'px';
-            picker.click();
-          }
+          populateDataDisplay();
         });
       });
     });
