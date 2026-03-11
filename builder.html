@@ -740,7 +740,13 @@
         });
         popup.querySelector('.color-preset-custom').addEventListener('click', () => {
           _dismissColorPopup();
-          document.querySelector(`.bar-color-input[data-bar-idx="${i}"]`)?.click();
+          const picker = document.querySelector(`.bar-color-input[data-bar-idx="${i}"]`);
+          if (picker) {
+            const r = btn.getBoundingClientRect();
+            picker.style.top  = r.bottom + 'px';
+            picker.style.left = r.left + 'px';
+            picker.click();
+          }
         });
       });
     });
