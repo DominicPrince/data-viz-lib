@@ -572,9 +572,25 @@
       out += `<text data-editable="source" x="24" y="${topPad + chartH + 28}" font-size="11" font-family="${font}" fill="${mutedColor}">${escSVG('Source: ' + source)}</text>`;
     }
     if (logoDataUrl) {
-      // Vertically centre logo within footer area; right-align via preserveAspectRatio
       const logoY = topPad + chartH + Math.floor((bottomPad - logoH) / 2);
-      out += `<image data-editable="logo" style="cursor:pointer" href="${logoDataUrl}" x="24" y="${logoY}" width="${W - 48}" height="${logoH}" preserveAspectRatio="xMaxYMid meet"/>`;
+      let logoX = W - 48 - 24, logoW = W - 48; // default: full span, preserveAspectRatio right-aligns
+      // SVG images ignore the outer preserveAspectRatio, so compute exact width + x from viewBox
+      if (logoDataUrl.startsWith('data:image/svg')) {
+        try {
+          const svgText = atob(logoDataUrl.split(',')[1]);
+          const vb = svgText.match(/viewBox=["']([^"']+)["']/);
+          const parts = vb ? vb[1].trim().split(/\s+/) : [];
+          const wAttr = svgText.match(/\bwidth=["']([\d.]+)/);
+          const hAttr = svgText.match(/\bheight=["']([\d.]+)/);
+          const vbW = parts.length >= 4 ? parseFloat(parts[2]) : (wAttr ? parseFloat(wAttr[1]) : 0);
+          const vbH = parts.length >= 4 ? parseFloat(parts[3]) : (hAttr ? parseFloat(hAttr[1]) : 0);
+          if (vbW && vbH) {
+            logoW = Math.round(logoH * (vbW / vbH));
+            logoX = W - 24 - logoW;
+          }
+        } catch(e) {}
+      }
+      out += `<image data-editable="logo" style="cursor:pointer" href="${logoDataUrl}" x="${logoX}" y="${logoY}" width="${logoW}" height="${logoH}" preserveAspectRatio="xMaxYMid meet"/>`;
     }
 
     out += '</svg>';
