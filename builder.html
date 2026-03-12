@@ -58,7 +58,7 @@
           <input type="file" id="b-logo-input" accept="image/*" hidden />
           <span class="b-logo-name" id="b-logo-name" hidden></span>
         </div>
-        <div class="config-field">
+        <div class="config-field" id="b-logosize-field" hidden>
           <label>Logo size <span class="config-field-value" id="b-logosize-val">12px</span></label>
           <input type="range" class="config-range" id="b-logosize" min="5" max="64" step="1" value="12" />
         </div>
@@ -1125,7 +1125,7 @@
     const nameEl = document.getElementById('b-logo-name');
     nameEl.textContent = file.name; nameEl.hidden = false;
     const reader = new FileReader();
-    reader.onload = ev => { bState.options.logoDataUrl = ev.target.result; rerender(); };
+    reader.onload = ev => { bState.options.logoDataUrl = ev.target.result; document.getElementById('b-logosize-field').hidden = false; rerender(); };
     reader.readAsDataURL(file);
   });
 
