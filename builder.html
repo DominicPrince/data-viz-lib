@@ -478,6 +478,176 @@
     return (filterDef ? `<defs>${filterDef}</defs>` : '') + `${grid}<g${glowAttr}>${bubbles}</g>${axisLabelsSVG}`;
   }
 
+  function renderLollipopChartInner(theme, data, chartStyle, options) {
+    const W = 560, H = 300;
+    const pad = { top: 16, right: 16, bottom: 40, left: 50 };
+    const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
+    const tok = chartTokens(effectiveTheme, chartStyle);
+    const { gridColor, baseColor, font, c0, glow, axisLabels, gridDash } = tok;
+    const textColor = options?.fontColor || tok.textColor;
+    const dotR = 6;
+
+    const dataMax = Math.max(...data.map(d => d.value), 1);
+    const yMaxOpt = options?.yMax !== '' && options?.yMax !== undefined && !isNaN(+options.yMax) ? +options.yMax : null;
+    const yMinOpt = options?.yMin !== '' && options?.yMin !== undefined && !isNaN(+options.yMin) ? +options.yMin : 0;
+    const { max, ticks } = yMaxOpt !== null ? customScale(yMinOpt, yMaxOpt) : niceScale(dataMax);
+    const scaleMin = yMaxOpt !== null ? yMinOpt : 0;
+
+    const cW = W - pad.left - pad.right;
+    const slot = cW / data.length;
+
+    const labelMaxW = Math.max(slot - 8, 20);
+    const wrappedLabels = data.map(d =>
+      axisLabels ? wrapSVGText(d.label, labelMaxW, 11, false, font) : []
+    );
+    const maxLabelLines = Math.max(...wrappedLabels.map(ls => ls.length), 1);
+    pad.bottom = Math.max(40, 24 + maxLabelLines * 13);
+    const xLabelLines = (options?.xLabel && axisLabels) ? wrapSVGText(options.xLabel, W - 100, 11, false, font) : [];
+    if (xLabelLines.length) pad.bottom += 14 + xLabelLines.length * 14;
+    const yLabelLines = (options?.yLabel && axisLabels) ? wrapSVGText(options.yLabel, 220, 11, false, font) : [];
+    if (yLabelLines.length) pad.left = Math.max(pad.left, 54 + (yLabelLines.length - 1) * 14);
+    pad.top = Math.max(pad.top, dotR + 4);
+
+    const cH = H - pad.top - pad.bottom;
+    const xMid = i => pad.left + slot * i + slot / 2;
+    const yV = v => pad.top + cH - ((v - scaleMin) / (max - scaleMin)) * cH;
+    const yBase = pad.top + cH;
+    const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+
+    const grid = ticks.map(t => {
+      const y = yV(t).toFixed(1);
+      const lbl = axisLabels
+        ? `<text x="${pad.left - 8}" y="${(+y + 4).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">${fmtTick(t)}</text>`
+        : '';
+      return `<line x1="${pad.left}" y1="${y}" x2="${W - pad.right}" y2="${y}" stroke="${t === scaleMin ? baseColor : gridColor}" stroke-width="1"${dash}/>${lbl}`;
+    }).join('');
+
+    const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
+    const filterDef = glow
+      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
+      : '';
+
+    const lollipops = data.map((d, i) => {
+      const cx = xMid(i), cy = yV(d.value);
+      const fill = options?.barColors?.[i] || c0;
+      const isSelected = options?.selectedBar === i;
+      const stem = `<line x1="${cx.toFixed(1)}" y1="${yBase.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${(cy + dotR).toFixed(1)}" stroke="${fill}" stroke-width="2"/>`;
+      const dot  = `<circle data-bar-idx="${i}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${dotR}" fill="${fill}"/>`;
+      const ring = isSelected
+        ? `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${dotR + 3}" fill="none" stroke="${fill}" stroke-width="2" opacity="0.5"/>`
+        : '';
+      const lbl = wrappedLabels[i].map((line, li) =>
+        `<text data-editable="bar-label-${i}" x="${cx.toFixed(1)}" y="${(yBase + 16 + li * 13).toFixed(1)}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(line)}</text>`
+      ).join('');
+      const labelHit = axisLabels
+        ? `<rect data-editable="bar-label-${i}" x="${(cx - slot / 2 + 2).toFixed(1)}" y="${(yBase + 4).toFixed(1)}" width="${(slot - 4).toFixed(1)}" height="${(pad.bottom - 8).toFixed(1)}" fill="transparent" style="cursor:text"/>`
+        : '';
+      return stem + dot + ring + labelHit + lbl;
+    }).join('');
+
+    const glowAttr = glow ? ` filter="url(#${fid})"` : '';
+    let axisLabelsSVG = '';
+    if (xLabelLines.length) {
+      const cx = (pad.left + W - pad.right) / 2;
+      xLabelLines.forEach((line, i) => {
+        const ly = H - 14 - (xLabelLines.length - 1 - i) * 14;
+        axisLabelsSVG += `<text x="${cx.toFixed(1)}" y="${ly}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(line)}</text>`;
+      });
+    }
+    if (yLabelLines.length) {
+      const cy = pad.top + cH / 2;
+      yLabelLines.forEach((line, i) => {
+        const lx = 14 + i * 14;
+        axisLabelsSVG += `<text text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}" transform="translate(${lx},${cy.toFixed(1)}) rotate(-90)">${escSVG(line)}</text>`;
+      });
+    }
+
+    return (filterDef ? `<defs>${filterDef}</defs>` : '') + `${grid}<g${glowAttr}>${lollipops}</g>${axisLabelsSVG}`;
+  }
+
+  function renderDotPlotInner(theme, data, chartStyle, options) {
+    const W = 560, H = 300;
+    const pad = { top: 12, right: 20, bottom: 36, left: 50 };
+    const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
+    const tok = chartTokens(effectiveTheme, chartStyle);
+    const { gridColor, baseColor, font, c0, glow, axisLabels, gridDash } = tok;
+    const textColor = options?.fontColor || tok.textColor;
+    const dotR = 6;
+
+    // X scale
+    const dataMax = Math.max(...data.map(d => d.value), 1);
+    const xMaxOpt = options?.xMax !== '' && options?.xMax !== undefined && !isNaN(+options.xMax) ? +options.xMax : null;
+    const xMinOpt = options?.xMin !== '' && options?.xMin !== undefined && !isNaN(+options.xMin) ? +options.xMin : null;
+    const { max: xScaleMax, ticks: xTicks } = xMaxOpt !== null ? customScale(xMinOpt ?? 0, xMaxOpt) : niceScale(dataMax);
+    const xScaleMin = xMaxOpt !== null ? (xMinOpt ?? 0) : (xMinOpt !== null ? xMinOpt : 0);
+
+    // Measure category label widths dynamically
+    if (axisLabels) {
+      const _can = document.createElement('canvas');
+      const _ctx = _can.getContext('2d');
+      _ctx.font = `11px ${font}`;
+      const maxLW = Math.max(...data.map(d => _ctx.measureText(d.label).width), 0);
+      pad.left = Math.max(50, Math.ceil(maxLW) + 14);
+    }
+
+    const xLabelLines = (options?.xLabel && axisLabels) ? wrapSVGText(options.xLabel, W - 100, 11, false, font) : [];
+    if (xLabelLines.length) pad.bottom += 14 + xLabelLines.length * 14;
+    pad.right = Math.max(pad.right, dotR + 8);
+
+    const cH = H - pad.top - pad.bottom;
+    const cW = W - pad.left - pad.right;
+    const rowH = cH / data.length;
+    const rowCy = i => pad.top + (i + 0.5) * rowH;
+    const scX = v => pad.left + ((v - xScaleMin) / (xScaleMax - xScaleMin)) * cW;
+    const yBase = pad.top + cH;
+    const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+
+    // Vertical grid lines at each X tick + tick labels
+    const grid = xTicks.map(t => {
+      const x = scX(t).toFixed(1);
+      const lbl = axisLabels
+        ? `<text x="${x}" y="${(yBase + 14).toFixed(1)}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${fmtTick(t)}</text>`
+        : '';
+      return `<line x1="${x}" y1="${pad.top}" x2="${x}" y2="${yBase}" stroke="${t === xScaleMin ? baseColor : gridColor}" stroke-width="1"${dash}/>${lbl}`;
+    }).join('');
+    const xAxis = `<line x1="${pad.left}" y1="${yBase}" x2="${W - pad.right}" y2="${yBase}" stroke="${baseColor}" stroke-width="1"/>`;
+
+    const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
+    const filterDef = glow
+      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
+      : '';
+
+    const dots = data.map((d, i) => {
+      const cx = scX(d.value), cy = rowCy(i);
+      const fill = options?.barColors?.[i] || c0;
+      const isSelected = options?.selectedBar === i;
+      const rowLine = `<line x1="${pad.left}" y1="${cy.toFixed(1)}" x2="${(cx - dotR).toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${gridColor}" stroke-width="1"/>`;
+      const dot = `<circle data-bar-idx="${i}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${dotR}" fill="${fill}"/>`;
+      const ring = isSelected
+        ? `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${dotR + 3}" fill="none" stroke="${fill}" stroke-width="2" opacity="0.5"/>`
+        : '';
+      const labelText = axisLabels
+        ? `<text data-editable="bar-label-${i}" x="${(pad.left - 8).toFixed(1)}" y="${(cy + 4).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(d.label)}</text>`
+        : '';
+      const labelHit = axisLabels
+        ? `<rect data-editable="bar-label-${i}" x="0" y="${(cy - rowH / 2).toFixed(1)}" width="${(pad.left - 4).toFixed(1)}" height="${rowH.toFixed(1)}" fill="transparent" style="cursor:text"/>`
+        : '';
+      return rowLine + dot + ring + labelHit + labelText;
+    }).join('');
+
+    const glowAttr = glow ? ` filter="url(#${fid})"` : '';
+    let axisLabelsSVG = '';
+    if (xLabelLines.length) {
+      const cx = (pad.left + W - pad.right) / 2;
+      xLabelLines.forEach((line, i) => {
+        const ly = H - 14 - (xLabelLines.length - 1 - i) * 14;
+        axisLabelsSVG += `<text x="${cx.toFixed(1)}" y="${ly}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(line)}</text>`;
+      });
+    }
+
+    return (filterDef ? `<defs>${filterDef}</defs>` : '') + `${xAxis}${grid}<g${glowAttr}>${dots}</g>${axisLabelsSVG}`;
+  }
+
   function escSVG(str) {
     return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
@@ -660,6 +830,10 @@
     let inner;
     if (chartId === 'bubble-chart') {
       inner = renderBubbleChartInner(bState.theme, bState.data, bState.chartStyle, bState.options);
+    } else if (chartId === 'lollipop-chart') {
+      inner = renderLollipopChartInner(bState.theme, bState.data, bState.chartStyle, bState.options);
+    } else if (chartId === 'dot-plot') {
+      inner = renderDotPlotInner(bState.theme, bState.data, bState.chartStyle, bState.options);
     } else {
       inner = renderBarChartInner(bState.theme, bState.data, bState.chartStyle, bState.options);
     }

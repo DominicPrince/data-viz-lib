@@ -1189,7 +1189,7 @@ const CHART_RECOMMENDATIONS = {
 /* ── Load catalog ────────────────────────────────────────────────────────── */
 async function loadCatalog() {
   showSkeletons();
-  const res = await fetch('data/catalog.json?v=41');
+  const res = await fetch('data/catalog.json?v=43');
   state.catalog = await res.json();
 
   state.fuse = new Fuse(state.catalog, {
@@ -1327,6 +1327,7 @@ function renderGrid(items, { recommended = false } = {}) {
     ).join('');
 
     card.innerHTML = `
+      ${viz.builderReady ? '<div class="build-badge">Build</div>' : ''}
       <div class="viz-card-preview" id="preview-${viz.id}"></div>
       <div class="viz-card-body">
         <div class="viz-card-name">${viz.name}</div>

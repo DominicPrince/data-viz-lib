@@ -75,7 +75,7 @@ const CHART_SCHEMAS = {
   'lollipop-chart': {
     name: 'Lollipop Chart',
     dataShape: 'label-value',
-    builderReady: false,
+    builderReady: true,
     columns: [
       { key: 'label', label: 'Category', type: 'string', required: true,  example: 'Apples' },
       { key: 'value', label: 'Value',    type: 'number', required: true,  example: '85'     },
@@ -151,7 +151,7 @@ const CHART_SCHEMAS = {
   'dot-plot': {
     name: 'Dot Plot',
     dataShape: 'label-value',
-    builderReady: false,
+    builderReady: true,
     columns: [
       { key: 'label', label: 'Category', type: 'string', required: true, example: 'United Kingdom' },
       { key: 'value', label: 'Value',    type: 'number', required: true, example: '75'             },

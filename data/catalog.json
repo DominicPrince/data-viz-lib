@@ -16,7 +16,52 @@
       "Displaying part-to-whole relationships (use a pie or stacked bar)",
       "More than ~20 categories — it becomes unreadable"
     ],
-    "also_see": ["grouped-bar-chart", "stacked-bar-chart", "lollipop-chart"]
+    "also_see": ["grouped-bar-chart", "stacked-bar-chart", "lollipop-chart"],
+    "builderReady": true
+  },
+  {
+    "id": "bubble-chart",
+    "name": "Bubble Chart",
+    "description": "A scatter plot where a third variable is encoded as the area of each circle, allowing three dimensions of data to be shown at once.",
+    "aliases": ["bubble plot", "circle chart", "sized scatter", "balloon chart"],
+    "keywords": ["bubbles", "circles", "big circles", "sized circles", "three variables", "area", "size", "balls", "spheres"],
+    "tags": ["relationship", "comparison", "multi-variable"],
+    "use_cases": [
+      "Comparing entities across three variables simultaneously (e.g. country GDP, population, life expectancy)",
+      "Showing relative size alongside position",
+      "Making data feel more engaging and visual"
+    ],
+    "not_use_cases": [
+      "Precise value comparison — humans are poor at judging circle area",
+      "More than ~50 data points — overlapping becomes unreadable",
+      "When the third variable isn't meaningful (use scatter instead)"
+    ],
+    "also_see": ["scatter-plot", "treemap", "proportional-symbol-map"],
+    "builderReady": true
+  },
+  {
+    "id": "lollipop-chart",
+    "name": "Lollipop Chart",
+    "description": "A cleaner alternative to bar charts using a dot on a thin stem to encode a single numeric value per category.",
+    "aliases": ["dot-stem chart", "pin chart", "needle chart"],
+    "keywords": ["dots on sticks", "circles on lines", "lollipop", "dot with line", "thin bar with dot", "pin chart"],
+    "tags": ["comparison", "categorical", "ranking"],
+    "use_cases": ["Ranking countries by life expectancy without the visual weight of a full bar chart", "Comparing performance metrics for a large number of items where bars would feel cluttered", "Displaying sparse data where the dot position is more important than bar area"],
+    "not_use_cases": ["When showing part-to-whole composition — segments cannot be added to lollipop stems", "When the audience expects conventional bar charts in a formal report context", "When values are very close together and the dot difference is imperceptible"],
+    "also_see": ["bar-chart", "dot-plot", "dumbbell-chart"],
+    "builderReady": true
+  },
+  {
+    "id": "dot-plot",
+    "name": "Dot Plot",
+    "description": "Individual data points are plotted as dots along an axis, making distribution and individual values easy to read.",
+    "aliases": ["Cleveland dot plot", "dot chart", "strip chart"],
+    "keywords": ["dots on axis", "individual data points", "Cleveland plot", "dot ranking", "circles on scale", "point plot"],
+    "tags": ["distribution", "comparison", "categorical"],
+    "use_cases": ["Comparing average life expectancy across countries while showing individual country dots", "Displaying test scores for each student in a class to see spread and outliers", "Ranking products by rating with each dot representing a review score"],
+    "not_use_cases": ["When the dataset is so large that dots overlap and obscure the distribution — use beeswarm or histogram", "When showing change over time across many periods — use a line chart", "When part-to-whole relationships are more important than individual comparisons"],
+    "also_see": ["lollipop-chart", "strip-plot", "beeswarm-plot"],
+    "builderReady": true
   },
   {
     "id": "line-chart",
@@ -55,25 +100,6 @@
       "Communicating to general audiences without guidance"
     ],
     "also_see": ["bubble-chart", "line-chart", "heatmap"]
-  },
-  {
-    "id": "bubble-chart",
-    "name": "Bubble Chart",
-    "description": "A scatter plot where a third variable is encoded as the area of each circle, allowing three dimensions of data to be shown at once.",
-    "aliases": ["bubble plot", "circle chart", "sized scatter", "balloon chart"],
-    "keywords": ["bubbles", "circles", "big circles", "sized circles", "three variables", "area", "size", "balls", "spheres"],
-    "tags": ["relationship", "comparison", "multi-variable"],
-    "use_cases": [
-      "Comparing entities across three variables simultaneously (e.g. country GDP, population, life expectancy)",
-      "Showing relative size alongside position",
-      "Making data feel more engaging and visual"
-    ],
-    "not_use_cases": [
-      "Precise value comparison — humans are poor at judging circle area",
-      "More than ~50 data points — overlapping becomes unreadable",
-      "When the third variable isn't meaningful (use scatter instead)"
-    ],
-    "also_see": ["scatter-plot", "treemap", "proportional-symbol-map"]
   },
   {
     "id": "pie-chart",
@@ -318,17 +344,6 @@
     "also_see": ["stacked-bar-chart", "waffle-chart", "pie-chart"]
   },
   {
-    "id": "lollipop-chart",
-    "name": "Lollipop Chart",
-    "description": "A cleaner alternative to bar charts using a dot on a thin stem to encode a single numeric value per category.",
-    "aliases": ["dot-stem chart", "pin chart", "needle chart"],
-    "keywords": ["dots on sticks", "circles on lines", "lollipop", "dot with line", "thin bar with dot", "pin chart"],
-    "tags": ["comparison", "categorical", "ranking"],
-    "use_cases": ["Ranking countries by life expectancy without the visual weight of a full bar chart", "Comparing performance metrics for a large number of items where bars would feel cluttered", "Displaying sparse data where the dot position is more important than bar area"],
-    "not_use_cases": ["When showing part-to-whole composition — segments cannot be added to lollipop stems", "When the audience expects conventional bar charts in a formal report context", "When values are very close together and the dot difference is imperceptible"],
-    "also_see": ["bar-chart", "dot-plot", "dumbbell-chart"]
-  },
-  {
     "id": "dumbbell-chart",
     "name": "Dumbbell Chart",
     "description": "Shows the difference between two values for each category using dots connected by a horizontal or vertical line.",
@@ -404,17 +419,6 @@
     "use_cases": ["Displaying a salesperson's actual revenue vs their monthly quota with a performance band", "Showing a project's current completion percentage against a target with risk zones", "Comparing a product's customer satisfaction score against a benchmark within a dashboard"],
     "not_use_cases": ["When there is no meaningful target or benchmark to compare the primary value against", "When the qualitative ranges (poor/satisfactory/good) are not defined or meaningful", "When multiple values per category need to be compared — use a grouped bar instead"],
     "also_see": ["gauge-chart", "bar-chart", "lollipop-chart"]
-  },
-  {
-    "id": "dot-plot",
-    "name": "Dot Plot",
-    "description": "Individual data points are plotted as dots along an axis, making distribution and individual values easy to read.",
-    "aliases": ["Cleveland dot plot", "dot chart", "strip chart"],
-    "keywords": ["dots on axis", "individual data points", "Cleveland plot", "dot ranking", "circles on scale", "point plot"],
-    "tags": ["distribution", "comparison", "categorical"],
-    "use_cases": ["Comparing average life expectancy across countries while showing individual country dots", "Displaying test scores for each student in a class to see spread and outliers", "Ranking products by rating with each dot representing a review score"],
-    "not_use_cases": ["When the dataset is so large that dots overlap and obscure the distribution — use beeswarm or histogram", "When showing change over time across many periods — use a line chart", "When part-to-whole relationships are more important than individual comparisons"],
-    "also_see": ["lollipop-chart", "strip-plot", "beeswarm-plot"]
   },
   {
     "id": "strip-plot",
