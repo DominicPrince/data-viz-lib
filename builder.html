@@ -590,7 +590,7 @@
     }
     if (logoDataUrl) {
       const logoY = topPad + chartH + Math.floor((bottomPad - logoH) / 2);
-      let logoX = W - 48 - 24, logoW = W - 48; // default: full span, preserveAspectRatio right-aligns
+      let logoX = 24, logoW = W - 48; // default: full span, preserveAspectRatio right-aligns for PNGs
       // SVG images ignore the outer preserveAspectRatio, so compute exact width + x from viewBox
       if (logoDataUrl.startsWith('data:image/svg')) {
         try {
