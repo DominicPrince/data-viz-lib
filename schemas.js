@@ -257,7 +257,7 @@ const CHART_SCHEMAS = {
   'line-chart': {
     name: 'Line Chart',
     dataShape: 'time-value',
-    builderReady: false,
+    builderReady: true,
     columns: [
       { key: 'date',  label: 'Date',  type: 'date',   required: true,  example: '2024-01' },
       { key: 'value', label: 'Value', type: 'number', required: true,  example: '42'      },
@@ -274,7 +274,7 @@ const CHART_SCHEMAS = {
   'area-chart': {
     name: 'Area Chart',
     dataShape: 'time-value',
-    builderReady: false,
+    builderReady: true,
     columns: [
       { key: 'date',  label: 'Date',  type: 'date',   required: true, example: '2024-01' },
       { key: 'value', label: 'Value', type: 'number', required: true, example: '42'      },
@@ -288,7 +288,7 @@ const CHART_SCHEMAS = {
   'step-chart': {
     name: 'Step Chart',
     dataShape: 'time-value',
-    builderReady: false,
+    builderReady: true,
     columns: [
       { key: 'date',  label: 'Date',  type: 'date',   required: true, example: '2024-01' },
       { key: 'value', label: 'Value', type: 'number', required: true, example: '42'      },

@@ -80,7 +80,40 @@
       "Data with fewer than 3 points — a line implies continuous change",
       "Showing part-to-whole composition"
     ],
-    "also_see": ["area-chart", "bar-chart", "scatter-plot"]
+    "also_see": ["area-chart", "bar-chart", "scatter-plot"],
+    "builderReady": true
+  },
+  {
+    "id": "area-chart",
+    "name": "Area Chart",
+    "description": "A line chart where the area beneath the line is filled, emphasising the volume or magnitude of change over time.",
+    "aliases": ["area graph", "filled line chart", "mountain chart"],
+    "keywords": ["area", "filled", "shaded", "volume", "cumulative", "trend", "time", "magnitude"],
+    "tags": ["temporal", "trend", "volume"],
+    "use_cases": [
+      "Showing cumulative totals over time",
+      "Emphasising the scale of change, not just the direction",
+      "Stacked area charts for part-to-whole over time"
+    ],
+    "not_use_cases": [
+      "Multiple overlapping series — filled areas obscure each other",
+      "When the baseline isn't zero — can be visually misleading",
+      "Communicating precise values (use a line chart)"
+    ],
+    "also_see": ["line-chart", "stacked-bar-chart"],
+    "builderReady": true
+  },
+  {
+    "id": "step-chart",
+    "name": "Step Chart",
+    "description": "A line chart variant where values change in discrete steps rather than smooth interpolation, ideal for data that holds a value until it changes.",
+    "aliases": ["step line chart", "staircase chart", "step function chart", "stepped line"],
+    "keywords": ["staircase line", "stepped line", "right angle line", "discrete changes", "holds value then jumps", "blocky line chart"],
+    "tags": ["temporal", "trend", "continuous"],
+    "use_cases": ["Showing a central bank's interest rate held flat then raised at policy meetings", "Visualizing software version releases that stay current until the next version ships", "Displaying a utility's tiered pricing that changes at discrete consumption thresholds"],
+    "not_use_cases": ["When values change continuously and interpolation between points is meaningful", "When showing smooth trends where the staircase shape would imply false precision", "When the data is categorical rather than a true held value over time"],
+    "also_see": ["line-chart", "area-chart", "span-chart"],
+    "builderReady": true
   },
   {
     "id": "scatter-plot",
@@ -119,25 +152,6 @@
       "When the exact percentages matter more than the visual impression"
     ],
     "also_see": ["donut-chart", "treemap", "stacked-bar-chart", "waffle-chart"]
-  },
-  {
-    "id": "area-chart",
-    "name": "Area Chart",
-    "description": "A line chart where the area beneath the line is filled, emphasising the volume or magnitude of change over time.",
-    "aliases": ["area graph", "filled line chart", "mountain chart"],
-    "keywords": ["area", "filled", "shaded", "volume", "cumulative", "trend", "time", "magnitude"],
-    "tags": ["temporal", "trend", "volume"],
-    "use_cases": [
-      "Showing cumulative totals over time",
-      "Emphasising the scale of change, not just the direction",
-      "Stacked area charts for part-to-whole over time"
-    ],
-    "not_use_cases": [
-      "Multiple overlapping series — filled areas obscure each other",
-      "When the baseline isn't zero — can be visually misleading",
-      "Communicating precise values (use a line chart)"
-    ],
-    "also_see": ["line-chart", "stacked-bar-chart"]
   },
   {
     "id": "heatmap",
@@ -507,17 +521,6 @@
     "use_cases": ["Showing the rise and fall of music genre popularity over several decades", "Visualizing seasonal fluctuations in topic volumes across a news archive", "Displaying the evolving dominance of programming languages in open-source repositories over time"],
     "not_use_cases": ["When precise values or exact comparisons between categories are required", "When there are only two or three categories — a simple stacked area chart suffices", "When data has no meaningful temporal flow or ordering"],
     "also_see": ["stacked-area-chart", "area-chart", "line-chart"]
-  },
-  {
-    "id": "step-chart",
-    "name": "Step Chart",
-    "description": "A line chart variant where values change in discrete steps rather than smooth interpolation, ideal for data that holds a value until it changes.",
-    "aliases": ["step line chart", "staircase chart", "step function chart", "stepped line"],
-    "keywords": ["staircase line", "stepped line", "right angle line", "discrete changes", "holds value then jumps", "blocky line chart"],
-    "tags": ["temporal", "trend", "continuous"],
-    "use_cases": ["Showing a central bank's interest rate held flat then raised at policy meetings", "Visualizing software version releases that stay current until the next version ships", "Displaying a utility's tiered pricing that changes at discrete consumption thresholds"],
-    "not_use_cases": ["When values change continuously and interpolation between points is meaningful", "When showing smooth trends where the staircase shape would imply false precision", "When the data is categorical rather than a true held value over time"],
-    "also_see": ["line-chart", "area-chart", "span-chart"]
   },
   {
     "id": "connected-scatter-plot",
