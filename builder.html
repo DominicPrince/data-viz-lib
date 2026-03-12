@@ -302,7 +302,8 @@
     );
     const maxLabelLines = Math.max(...wrappedLabels.map(ls => ls.length), 1);
     pad.bottom = Math.max(40, 24 + maxLabelLines * 13);
-    if (options?.xLabel) pad.bottom += 16;
+    const xLabelLines = (options?.xLabel && axisLabels) ? wrapSVGText(options.xLabel, W - 100, 11, false, font) : [];
+    if (xLabelLines.length) pad.bottom += 14 + xLabelLines.length * 14;
     const yLabelLines = (options?.yLabel && axisLabels) ? wrapSVGText(options.yLabel, 220, 11, false, font) : [];
     if (yLabelLines.length) pad.left = Math.max(pad.left, 54 + (yLabelLines.length - 1) * 14);
 
@@ -349,14 +350,17 @@
     const glowAttr = glow ? ` filter="url(#${fid})"` : '';
 
     let axisLabelsSVG = '';
-    if (options?.xLabel) {
+    if (xLabelLines.length) {
       const cx = (pad.left + W - pad.right) / 2;
-      axisLabelsSVG += `<text x="${cx.toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(options.xLabel)}</text>`;
+      xLabelLines.forEach((line, i) => {
+        const ly = H - 14 - (xLabelLines.length - 1 - i) * 14;
+        axisLabelsSVG += `<text x="${cx.toFixed(1)}" y="${ly}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(line)}</text>`;
+      });
     }
     if (yLabelLines.length) {
       const cy = pad.top + cH / 2;
       yLabelLines.forEach((line, i) => {
-        const lx = 12 + i * 14;
+        const lx = 14 + i * 14;
         axisLabelsSVG += `<text text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}" transform="translate(${lx},${cy.toFixed(1)}) rotate(-90)">${escSVG(line)}</text>`;
       });
     }
@@ -387,7 +391,8 @@
     const maxR = Math.ceil(rOf(sMax));
 
     const pad = { top: 12 + maxR, right: 12 + maxR, bottom: 44, left: 54 };
-    if (options?.xLabel) pad.bottom += 16;
+    const xLabelLines = (options?.xLabel && axisLabels) ? wrapSVGText(options.xLabel, W - 100, 11, false, font) : [];
+    if (xLabelLines.length) pad.bottom += 14 + xLabelLines.length * 14;
     const yLabelLines = (options?.yLabel && axisLabels) ? wrapSVGText(options.yLabel, 220, 11, false, font) : [];
     if (yLabelLines.length) pad.left = Math.max(pad.left, 54 + (yLabelLines.length - 1) * 14);
 
@@ -455,13 +460,17 @@
     const glowAttr = glow ? ` filter="url(#${fid})"` : '';
 
     let axisLabelsSVG = '';
-    if (options?.xLabel) {
-      axisLabelsSVG += `<text x="${(pad.left + cW / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(options.xLabel)}</text>`;
+    if (xLabelLines.length) {
+      const cx = (pad.left + cW / 2).toFixed(1);
+      xLabelLines.forEach((line, i) => {
+        const ly = H - 14 - (xLabelLines.length - 1 - i) * 14;
+        axisLabelsSVG += `<text x="${cx}" y="${ly}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(line)}</text>`;
+      });
     }
     if (yLabelLines.length) {
       const cy = pad.top + cH / 2;
       yLabelLines.forEach((line, i) => {
-        const lx = 12 + i * 14;
+        const lx = 14 + i * 14;
         axisLabelsSVG += `<text text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}" transform="translate(${lx},${cy.toFixed(1)}) rotate(-90)">${escSVG(line)}</text>`;
       });
     }
