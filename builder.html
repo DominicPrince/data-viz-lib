@@ -131,6 +131,14 @@
             <button class="b-color-auto is-auto" id="b-fontcolor-auto">Auto</button>
           </div>
         </div>
+        <div class="config-field" id="line-color-field" hidden>
+          <label>Line colour</label>
+          <div class="b-color-row">
+            <input type="color" class="b-color-picker" id="b-linecolor" value="#3b82f6" />
+            <span class="b-color-hex" id="b-linecolor-hex">#3b82f6</span>
+            <button class="b-color-auto is-auto" id="b-linecolor-auto">Auto</button>
+          </div>
+        </div>
       </div>
 
       <div class="config-section">
@@ -1019,10 +1027,13 @@
                `data-col="${col.key}" data-row="${i}" value="${escAttr(String(val))}" ` +
                `placeholder="${col.label}" step="any">`;
       }).join('');
+      const isLineVariant = ['line-chart', 'area-chart', 'step-chart'].includes(chartId);
+      const swatchEl = isLineVariant ? '' :
+        `<button class="bar-color-swatch-btn" data-swatch="${i}" style="background:${color};" title="Choose colour"></button>` +
+        `<button class="color-reset-btn" data-reset="${i}" title="Reset to theme colour"${hasCustom ? '' : ' style="visibility:hidden"'}>↺</button>`;
       return `<div class="data-row${sel}" id="data-row-${i}" data-row-idx="${i}">` +
         gripperSVG +
-        `<button class="bar-color-swatch-btn" data-swatch="${i}" style="background:${color};" title="Choose colour"></button>` +
-        `<button class="color-reset-btn" data-reset="${i}" title="Reset to theme colour"${hasCustom ? '' : ' style="visibility:hidden"'}>↺</button>` +
+        swatchEl +
         inputs +
         `<button class="data-del-btn" data-del="${i}" title="Remove">×</button>` +
       `</div>`;
@@ -1466,6 +1477,30 @@
     fontColorAuto.classList.add('is-auto');
     rerender();
   });
+
+  // Line colour — only shown for line/area/step charts
+  const _isLineVariant = ['line-chart', 'area-chart', 'step-chart'].includes(chartId);
+  if (_isLineVariant) {
+    document.getElementById('line-color-field').hidden = false;
+    const lineColorInput = document.getElementById('b-linecolor');
+    const lineColorHex   = document.getElementById('b-linecolor-hex');
+    const lineColorAuto  = document.getElementById('b-linecolor-auto');
+    const _initLineColor = bState.options.barColors[0] || bState.theme.palette[0] || '#3b82f6';
+    lineColorInput.value       = _initLineColor;
+    lineColorHex.textContent   = _initLineColor;
+    if (bState.options.barColors[0]) lineColorAuto.classList.remove('is-auto');
+    lineColorInput.addEventListener('input', e => {
+      bState.options.barColors[0] = e.target.value;
+      lineColorHex.textContent = e.target.value;
+      lineColorAuto.classList.remove('is-auto');
+      rerender();
+    });
+    lineColorAuto.addEventListener('click', () => {
+      bState.options.barColors[0] = undefined;
+      lineColorAuto.classList.add('is-auto');
+      rerender();
+    });
+  }
 
   /* ─────────────────────────────────────────────────────────
      Export
