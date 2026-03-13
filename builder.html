@@ -838,7 +838,7 @@
         d_attr = `M ${cx},${cy} L ${x1.toFixed(2)},${y1.toFixed(2)} A ${R},${R} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z`;
       }
 
-      slices += `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}" stroke="${effectiveTheme.bg}" stroke-width="${isSelected ? 2.5 : 1}"${glowAttr}/>`;
+      slices += `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}" stroke="${effectiveTheme.bg}" stroke-width="${isSelected ? 2.5 : 1}"/>`;
 
       // Percentage label — only if slice ≥ 5%
       if (showValues && sliceAngle / (2 * Math.PI) >= 0.05) {
@@ -847,7 +847,7 @@
         const ly = cy + labelR * Math.sin(midAngle);
         const pct = Math.round(val / total * 100) + '%';
         const labelFill = isColorDark(fill) ? 'rgba(255,255,255,0.92)' : 'rgba(0,0,0,0.72)';
-        valueLabels += `<text x="${lx.toFixed(1)}" y="${(ly + 4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="600" font-family="${font}" fill="${labelFill}">${pct}</text>`;
+        valueLabels += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="600" font-family="${font}" fill="${labelFill}">${pct}</text>`;
       }
 
       // Legend entry
@@ -864,7 +864,7 @@
       startAngle = endAngle;
     });
 
-    return (filterDef ? `<defs>${filterDef}</defs>` : '') + `<g>${slices}</g>${valueLabels}${legendItems}`;
+    return (filterDef ? `<defs>${filterDef}</defs>` : '') + `<g${glowAttr}>${slices}</g>${valueLabels}${legendItems}`;
   }
 
   /* Scatter plot — data rows: { x, y, label? } */
