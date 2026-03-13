@@ -842,7 +842,9 @@
 
       // Percentage label — only if slice ≥ 5%
       if (showValues && sliceAngle / (2 * Math.PI) >= 0.05) {
-        const labelR   = variant === 'donut' ? (R + innerR) / 2 : R * 0.65;
+        // Sector centroid: 4R·sin(θ/2) / 3θ — places label at visual centre of each slice
+        const centroidR = (4 * R * Math.sin(sliceAngle / 2)) / (3 * sliceAngle);
+        const labelR    = variant === 'donut' ? (R + innerR) / 2 : Math.max(centroidR, R * 0.3);
         const lx = cx + labelR * Math.cos(midAngle);
         const ly = cy + labelR * Math.sin(midAngle);
         const pct = Math.round(val / total * 100) + '%';
