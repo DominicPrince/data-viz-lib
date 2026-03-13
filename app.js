@@ -1189,7 +1189,7 @@ const CHART_RECOMMENDATIONS = {
 /* ── Load catalog ────────────────────────────────────────────────────────── */
 async function loadCatalog() {
   showSkeletons();
-  const res = await fetch('data/catalog.json?v=44');
+  const res = await fetch('data/catalog.json?v=45');
   state.catalog = await res.json();
 
   state.fuse = new Fuse(state.catalog, {

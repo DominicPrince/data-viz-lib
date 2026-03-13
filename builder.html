@@ -64,7 +64,7 @@
         </div>
       </div>
 
-      <div class="config-section">
+      <div class="config-section" id="axes-section">
         <div class="config-section-header">Axes</div>
         <div class="config-field">
           <label>X-axis label</label>
@@ -89,6 +89,18 @@
             <span class="axis-range-sep">–</span>
             <input type="number" class="axis-range-input" id="b-xmax" placeholder="Auto" />
           </div>
+        </div>
+      </div>
+
+      <div class="config-section" id="display-section" hidden>
+        <div class="config-section-header">Display</div>
+        <div class="config-field config-field-check">
+          <label for="b-showvalues">Show percentages</label>
+          <input type="checkbox" id="b-showvalues" checked />
+        </div>
+        <div class="config-field config-field-check">
+          <label for="b-showlegend">Show legend</label>
+          <input type="checkbox" id="b-showlegend" checked />
         </div>
       </div>
 
@@ -764,6 +776,194 @@
     return (filterDef ? `<defs>${filterDef}</defs>` : '') + `${grid}${xLabels}${areaEl}${lineEl}${dotsEl}${axisLabelsSVG}`;
   }
 
+  /* variant: 'pie' | 'donut' */
+  function renderPieChartInner(theme, data, chartStyle, options, variant = 'pie') {
+    const W = 560, H = 300;
+    const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
+    const tok = chartTokens(effectiveTheme, chartStyle);
+    const { font, glow } = tok;
+    const textColor = options?.fontColor || tok.textColor;
+    const palette = effectiveTheme.palette || PRESETS.default.palette;
+
+    if (!data.length) {
+      return `<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="13" font-family="${font}" fill="${textColor}">Add data points to see the chart</text>`;
+    }
+
+    const total = data.reduce((s, d) => s + Math.max(+d.value || 0, 0), 0);
+    if (total === 0) {
+      return `<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="13" font-family="${font}" fill="${textColor}">All values are zero</text>`;
+    }
+
+    const showValues = options?.showValues !== false;
+    const showLegend = options?.showLegend !== false;
+
+    // Legend: measure height so we can shrink the circle to fit
+    const legendCols = Math.min(data.length, 4);
+    const legendRows = showLegend ? Math.ceil(data.length / legendCols) : 0;
+    const legendH    = showLegend ? legendRows * 20 + 10 : 0;
+
+    const chartAreaH = H - legendH;
+    const cx = W / 2;
+    const cy = chartAreaH / 2;
+    const R  = Math.min(W / 2, chartAreaH / 2) - 18;
+    const innerR = variant === 'donut' ? R * 0.5 : 0;
+
+    const fid = glow ? 'pie' + Math.random().toString(36).slice(2, 6) : '';
+    const filterDef = glow
+      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
+      : '';
+    const glowAttr = glow ? ` filter="url(#${fid})"` : '';
+
+    let slices = '', valueLabels = '', legendItems = '';
+    let startAngle = -Math.PI / 2;
+
+    data.forEach((d, i) => {
+      const val        = Math.max(+d.value || 0, 0);
+      const sliceAngle = (val / total) * 2 * Math.PI;
+      const endAngle   = startAngle + sliceAngle;
+      const midAngle   = startAngle + sliceAngle / 2;
+      const fill       = options?.barColors?.[i] || palette[i % palette.length];
+      const isSelected = options?.selectedBar === i;
+      const largeArc   = sliceAngle > Math.PI ? 1 : 0;
+
+      const x1 = cx + R * Math.cos(startAngle), y1 = cy + R * Math.sin(startAngle);
+      const x2 = cx + R * Math.cos(endAngle),   y2 = cy + R * Math.sin(endAngle);
+
+      let d_attr;
+      if (variant === 'donut') {
+        const ix1 = cx + innerR * Math.cos(startAngle), iy1 = cy + innerR * Math.sin(startAngle);
+        const ix2 = cx + innerR * Math.cos(endAngle),   iy2 = cy + innerR * Math.sin(endAngle);
+        d_attr = `M ${x1.toFixed(2)},${y1.toFixed(2)} A ${R},${R} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} L ${ix2.toFixed(2)},${iy2.toFixed(2)} A ${innerR},${innerR} 0 ${largeArc},0 ${ix1.toFixed(2)},${iy1.toFixed(2)} Z`;
+      } else {
+        d_attr = `M ${cx},${cy} L ${x1.toFixed(2)},${y1.toFixed(2)} A ${R},${R} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z`;
+      }
+
+      slices += `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}" stroke="${effectiveTheme.bg}" stroke-width="${isSelected ? 2.5 : 1}"${glowAttr}/>`;
+
+      // Percentage label — only if slice ≥ 5%
+      if (showValues && sliceAngle / (2 * Math.PI) >= 0.05) {
+        const labelR   = variant === 'donut' ? (R + innerR) / 2 : R * 0.65;
+        const lx = cx + labelR * Math.cos(midAngle);
+        const ly = cy + labelR * Math.sin(midAngle);
+        const pct = Math.round(val / total * 100) + '%';
+        const labelFill = isColorDark(fill) ? 'rgba(255,255,255,0.92)' : 'rgba(0,0,0,0.72)';
+        valueLabels += `<text x="${lx.toFixed(1)}" y="${(ly + 4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="600" font-family="${font}" fill="${labelFill}">${pct}</text>`;
+      }
+
+      // Legend entry
+      if (showLegend) {
+        const col = i % legendCols;
+        const row = Math.floor(i / legendCols);
+        const itemW = W / legendCols;
+        const lx = col * itemW + 10;
+        const ly = chartAreaH + 8 + row * 20;
+        legendItems += `<rect x="${lx}" y="${ly + 2}" width="10" height="10" rx="2" fill="${fill}"/>`;
+        legendItems += `<text x="${lx + 14}" y="${ly + 11}" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(d.label)}</text>`;
+      }
+
+      startAngle = endAngle;
+    });
+
+    return (filterDef ? `<defs>${filterDef}</defs>` : '') + `<g>${slices}</g>${valueLabels}${legendItems}`;
+  }
+
+  /* Scatter plot — data rows: { x, y, label? } */
+  function renderScatterPlotInner(theme, data, chartStyle, options) {
+    const W = 560, H = 300;
+    const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
+    const tok = chartTokens(effectiveTheme, chartStyle);
+    const { gridColor, baseColor, font, c0, gridDash, glow, axisLabels } = tok;
+    const textColor = options?.fontColor || tok.textColor;
+    const dotR = 5;
+
+    if (!data.length) {
+      return `<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="13" font-family="${font}" fill="${textColor}">Add data points to see the chart</text>`;
+    }
+
+    const xs = data.map(d => +d.x || 0);
+    const ys = data.map(d => +d.y || 0);
+
+    const pad = { top: 12 + dotR, right: 12 + dotR, bottom: 44, left: 54 };
+    const xLabelLines = (options?.xLabel && axisLabels) ? wrapSVGText(options.xLabel, W - 100, 11, false, font) : [];
+    if (xLabelLines.length) pad.bottom += 14 + xLabelLines.length * 14;
+    const yLabelLines = (options?.yLabel && axisLabels) ? wrapSVGText(options.yLabel, 220, 11, false, font) : [];
+    if (yLabelLines.length) pad.left = Math.max(pad.left, 54 + (yLabelLines.length - 1) * 14);
+
+    const hasXMin = options?.xMin !== '' && options?.xMin !== undefined && !isNaN(+options.xMin);
+    const hasXMax = options?.xMax !== '' && options?.xMax !== undefined && !isNaN(+options.xMax);
+    const hasYMin = options?.yMin !== '' && options?.yMin !== undefined && !isNaN(+options.yMin);
+    const hasYMax = options?.yMax !== '' && options?.yMax !== undefined && !isNaN(+options.yMax);
+
+    const xDataMin = Math.min(...xs), xDataMax = Math.max(...xs);
+    const yDataMin = Math.min(...ys), yDataMax = Math.max(...ys);
+    const xP = (xDataMax - xDataMin || 1) * 0.12;
+    const yP = (yDataMax - yDataMin || 1) * 0.15;
+
+    const xMinS = hasXMin ? +options.xMin : xDataMin - xP;
+    const xMaxS = hasXMax ? +options.xMax : xDataMax + xP;
+    const yMinS = hasYMin ? +options.yMin : yDataMin - yP;
+    const yMaxS = hasYMax ? +options.yMax : yDataMax + yP;
+
+    const cW = W - pad.left - pad.right;
+    const cH = H - pad.top - pad.bottom;
+    const scX = x => pad.left + ((x - xMinS) / (xMaxS - xMinS)) * cW;
+    const scY = y => pad.top + cH - ((y - yMinS) / (yMaxS - yMinS)) * cH;
+    const dash = gridDash ? ` stroke-dasharray="${gridDash}"` : '';
+
+    const { ticks: xTicks } = customScale(xMinS, xMaxS, 4);
+    const { ticks: yTicks } = customScale(yMinS, yMaxS, 4);
+
+    const grid =
+      yTicks.map(t => {
+        const y = scY(t).toFixed(1);
+        const lbl = axisLabels ? `<text x="${pad.left - 8}" y="${(+y + 4).toFixed(1)}" text-anchor="end" font-size="11" font-family="${font}" fill="${textColor}">${fmtTick(t)}</text>` : '';
+        return `<line x1="${pad.left}" y1="${y}" x2="${W - pad.right}" y2="${y}" stroke="${t === 0 ? baseColor : gridColor}" stroke-width="1"${dash}/>${lbl}`;
+      }).join('') +
+      xTicks.map(t => {
+        const x = scX(t).toFixed(1);
+        const lbl = axisLabels ? `<text x="${x}" y="${(pad.top + cH + 16).toFixed(1)}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${fmtTick(t)}</text>` : '';
+        return `<line x1="${x}" y1="${pad.top}" x2="${x}" y2="${(pad.top + cH).toFixed(1)}" stroke="${t === 0 ? baseColor : gridColor}" stroke-width="1"${dash}/>${lbl}`;
+      }).join('');
+
+    const fid = glow ? 'sct' + Math.random().toString(36).slice(2, 6) : '';
+    const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+
+    const dots = data.map((d, i) => {
+      const px = scX(+d.x || 0), py = scY(+d.y || 0);
+      const fill = options?.barColors?.[i] || c0;
+      const isSelected = options?.selectedBar === i;
+      const circle = `<circle data-bar-idx="${i}" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${dotR}" fill="${fill}" fill-opacity="0.8" stroke="${fill}" stroke-width="1.5"/>`;
+      const ring   = isSelected ? `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${dotR + 4}" fill="none" stroke="${fill}" stroke-width="2" opacity="0.45"/>` : '';
+      const labelAboveY = py - dotR - 5;
+      const below  = labelAboveY < pad.top + 10;
+      const lblY   = below ? py + dotR + 14 : labelAboveY;
+      const rectY  = below ? py + dotR + 3  : py - dotR - 16;
+      const lbl    = d.label
+        ? `<text data-editable="scatter-label-${i}" x="${px.toFixed(1)}" y="${lblY.toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${escSVG(d.label)}</text>`
+        : `<rect data-editable="scatter-label-${i}" x="${(px - 22).toFixed(1)}" y="${rectY.toFixed(1)}" width="44" height="13" fill="transparent" style="cursor:text"/>`;
+      return circle + ring + lbl;
+    }).join('');
+
+    const glowAttr = glow ? ` filter="url(#${fid})"` : '';
+    let axisLabelsSVG = '';
+    if (xLabelLines.length) {
+      const cx = (pad.left + cW / 2).toFixed(1);
+      xLabelLines.forEach((line, i) => {
+        const ly = H - 14 - (xLabelLines.length - 1 - i) * 14;
+        axisLabelsSVG += `<text x="${cx}" y="${ly}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(line)}</text>`;
+      });
+    }
+    if (yLabelLines.length) {
+      const cy = pad.top + cH / 2;
+      yLabelLines.forEach((line, i) => {
+        const lx = 14 + i * 14;
+        axisLabelsSVG += `<text text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}" transform="translate(${lx},${cy.toFixed(1)}) rotate(-90)">${escSVG(line)}</text>`;
+      });
+    }
+
+    return (filterDef ? `<defs>${filterDef}</defs>` : '') + `${grid}<g${glowAttr}>${dots}</g>${axisLabelsSVG}`;
+  }
+
   function escSVG(str) {
     return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
@@ -918,7 +1118,7 @@
     data:       loaded.data       || [],
     theme:      loaded.theme      || PRESETS.default,
     chartStyle: loaded.chartStyle || 'modern',
-    options: { title: '', subtitle: '', source: '', logoDataUrl: null, xLabel: '', yLabel: '', fontColor: '', bgColor: '', logoSize: 12, barColors: [], selectedBar: -1, yMin: '', yMax: '', xMin: '', xMax: '' },
+    options: { title: '', subtitle: '', source: '', logoDataUrl: null, xLabel: '', yLabel: '', fontColor: '', bgColor: '', logoSize: 12, barColors: [], selectedBar: -1, yMin: '', yMax: '', xMin: '', xMax: '', showValues: true, showLegend: true },
   };
 
   // Normalize legacy bar-chart data format { l, v } → { label, value }
@@ -931,10 +1131,27 @@
   document.title = chartName + ' Builder — data-viz-lib';
   document.getElementById('builder-title').textContent = chartName + ' Builder';
 
-  // Show X-axis range controls when schema needs them (or always for bubble chart)
-  if (schema?.config?.axes?.xMin || schema?.config?.axes?.xMax || chartId === 'bubble-chart') {
+  // Show X-axis range controls when schema needs them (or always for bubble/scatter)
+  if (schema?.config?.axes?.xMin || schema?.config?.axes?.xMax || chartId === 'bubble-chart' || chartId === 'scatter-plot') {
     const xrf = document.getElementById('axes-xrange-field');
     if (xrf) xrf.hidden = false;
+  }
+
+  // Pie/donut: hide axes section, show Display toggles
+  const _isPieVariant = chartId === 'pie-chart' || chartId === 'donut-chart';
+  if (_isPieVariant) {
+    document.getElementById('axes-section').hidden  = true;
+    document.getElementById('display-section').hidden = false;
+    document.getElementById('b-showvalues').checked = bState.options.showValues !== false;
+    document.getElementById('b-showlegend').checked = bState.options.showLegend !== false;
+    document.getElementById('b-showvalues').addEventListener('change', e => {
+      bState.options.showValues = e.target.checked;
+      rerender();
+    });
+    document.getElementById('b-showlegend').addEventListener('change', e => {
+      bState.options.showLegend = e.target.checked;
+      rerender();
+    });
   }
 
   let currentSVG = '';
@@ -956,6 +1173,12 @@
       inner = renderLineChartInner(bState.theme, bState.data, bState.chartStyle, bState.options, 'area');
     } else if (chartId === 'step-chart') {
       inner = renderLineChartInner(bState.theme, bState.data, bState.chartStyle, bState.options, 'step');
+    } else if (chartId === 'pie-chart') {
+      inner = renderPieChartInner(bState.theme, bState.data, bState.chartStyle, bState.options, 'pie');
+    } else if (chartId === 'donut-chart') {
+      inner = renderPieChartInner(bState.theme, bState.data, bState.chartStyle, bState.options, 'donut');
+    } else if (chartId === 'scatter-plot') {
+      inner = renderScatterPlotInner(bState.theme, bState.data, bState.chartStyle, bState.options);
     } else {
       inner = renderBarChartInner(bState.theme, bState.data, bState.chartStyle, bState.options);
     }

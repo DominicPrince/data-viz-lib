@@ -91,7 +91,7 @@ const CHART_SCHEMAS = {
   'pie-chart': {
     name: 'Pie Chart',
     dataShape: 'label-value',
-    builderReady: false,
+    builderReady: true,
     columns: [
       { key: 'label', label: 'Slice', type: 'string', required: true, example: 'Apples' },
       { key: 'value', label: 'Value', type: 'number', required: true, example: '85'     },
@@ -106,7 +106,7 @@ const CHART_SCHEMAS = {
   'donut-chart': {
     name: 'Donut Chart',
     dataShape: 'label-value',
-    builderReady: false,
+    builderReady: true,
     columns: [
       { key: 'label', label: 'Slice', type: 'string', required: true, example: 'Apples' },
       { key: 'value', label: 'Value', type: 'number', required: true, example: '85'     },
@@ -318,7 +318,7 @@ const CHART_SCHEMAS = {
   'scatter-plot': {
     name: 'Scatter Plot',
     dataShape: 'xy',
-    builderReady: false,
+    builderReady: true,
     columns: [
       { key: 'x',     label: 'X',     type: 'number', required: true,  example: '24'     },
       { key: 'y',     label: 'Y',     type: 'number', required: true,  example: '35'     },

@@ -132,7 +132,8 @@
       "Very small datasets where patterns can't emerge",
       "Communicating to general audiences without guidance"
     ],
-    "also_see": ["bubble-chart", "line-chart", "heatmap"]
+    "also_see": ["bubble-chart", "line-chart", "heatmap"],
+    "builderReady": true
   },
   {
     "id": "pie-chart",
@@ -151,7 +152,20 @@
       "Values that are close to each other in size",
       "When the exact percentages matter more than the visual impression"
     ],
-    "also_see": ["donut-chart", "treemap", "stacked-bar-chart", "waffle-chart"]
+    "also_see": ["donut-chart", "treemap", "stacked-bar-chart", "waffle-chart"],
+    "builderReady": true
+  },
+  {
+    "id": "donut-chart",
+    "name": "Donut Chart",
+    "description": "A pie chart with a hollow centre, often used to display a key metric or label in the empty space.",
+    "aliases": ["doughnut chart", "ring chart", "hollow pie chart"],
+    "keywords": ["ring chart", "hollow pie", "donut", "circle with hole", "arc segments", "circular proportions"],
+    "tags": ["part-to-whole", "proportion"],
+    "use_cases": ["Showing market share breakdown while displaying total revenue in the centre hole", "Displaying a completion percentage with the remaining portion as context", "Presenting survey response distribution with a summary stat in the middle"],
+    "not_use_cases": ["When precise comparisons between many slices are needed — angles are hard to judge", "When there are more than 5-6 categories, making the arcs too thin to distinguish", "When showing change over time — use a line or area chart instead"],
+    "also_see": ["pie-chart", "gauge-chart", "waffle-chart"],
+    "builderReady": true
   },
   {
     "id": "heatmap",
@@ -388,8 +402,6 @@
     "tags": ["part-to-whole", "proportion"],
     "use_cases": ["Showing market share breakdown while displaying total revenue in the centre hole", "Displaying a completion percentage with the remaining portion as context", "Presenting survey response distribution with a summary stat in the middle"],
     "not_use_cases": ["When precise comparisons between many slices are needed — angles are hard to judge", "When there are more than 5-6 categories, making the arcs too thin to distinguish", "When showing change over time — use a line or area chart instead"],
-    "also_see": ["pie-chart", "gauge-chart", "waffle-chart"]
-  },
   {
     "id": "sunburst-chart",
     "name": "Sunburst Chart",
