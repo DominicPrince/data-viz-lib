@@ -797,12 +797,29 @@
     const showValues = options?.showValues !== false;
     const showLegend = options?.showLegend !== false;
 
-    // Legend: measure height so we can shrink the circle to fit
-    const legendCols = Math.min(data.length, 4);
-    const legendRows = showLegend ? Math.ceil(data.length / legendCols) : 0;
+    // Pre-measure percentage label widths for centered row layout
+    const pctStrings = data.map(d => Math.round(Math.max(+d.value || 0, 0) / total * 100) + '%');
+    const _can = document.createElement('canvas');
+    const _ctx = _can.getContext('2d');
+    _ctx.font = `600 11px ${font}`;
+    const pctItemGap = 16;
+    const pctDotW    = 18; // dot (8px) + gap (6px) + trailing pad (4px)
+    const pctWidths  = pctStrings.map(s => Math.ceil(_ctx.measureText(s).width) + pctDotW);
+
+    const pctItemsPerRow = Math.min(data.length, 4);
+    const pctRows = showValues ? Math.ceil(data.length / pctItemsPerRow) : 0;
+    const pctH    = showValues ? pctRows * 18 + 10 : 0;
+
+    // Pre-measure legend label widths for centered row layout
+    _ctx.font = `11px ${font}`;
+    const legendItemGap      = 16;
+    const legendSquareW      = 14; // 10px square + 4px gap
+    const legendItemWidths   = data.map(d => legendSquareW + Math.ceil(_ctx.measureText(d.label).width));
+    const legendItemsPerRow  = Math.min(data.length, 4);
+    const legendRows = showLegend ? Math.ceil(data.length / legendItemsPerRow) : 0;
     const legendH    = showLegend ? legendRows * 20 + 10 : 0;
 
-    const chartAreaH = H - legendH;
+    const chartAreaH = H - pctH - legendH;
     const cx = W / 2;
     const cy = chartAreaH / 2;
     const R  = Math.min(W / 2, chartAreaH / 2) - 18;
@@ -821,7 +838,6 @@
       const val        = Math.max(+d.value || 0, 0);
       const sliceAngle = (val / total) * 2 * Math.PI;
       const endAngle   = startAngle + sliceAngle;
-      const midAngle   = startAngle + sliceAngle / 2;
       const fill       = options?.barColors?.[i] || palette[i % palette.length];
       const isSelected = options?.selectedBar === i;
       const largeArc   = sliceAngle > Math.PI ? 1 : 0;
@@ -840,31 +856,42 @@
 
       slices += `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}" stroke="${effectiveTheme.bg}" stroke-width="${isSelected ? 2.5 : 1}"/>`;
 
-      // Percentage label — only if slice ≥ 5%
-      if (showValues && sliceAngle / (2 * Math.PI) >= 0.05) {
-        // Sector centroid: 4R·sin(θ/2) / 3θ — places label at visual centre of each slice
-        const centroidR = (4 * R * Math.sin(sliceAngle / 2)) / (3 * sliceAngle);
-        const labelR    = variant === 'donut' ? (R + innerR) / 2 : Math.max(centroidR, R * 0.3);
-        const lx = cx + labelR * Math.cos(midAngle);
-        const ly = cy + labelR * Math.sin(midAngle);
-        const pct = Math.round(val / total * 100) + '%';
-        const labelFill = isColorDark(fill) ? 'rgba(255,255,255,0.92)' : 'rgba(0,0,0,0.72)';
-        valueLabels += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="600" font-family="${font}" fill="${labelFill}">${pct}</text>`;
-      }
-
-      // Legend entry
-      if (showLegend) {
-        const col = i % legendCols;
-        const row = Math.floor(i / legendCols);
-        const itemW = W / legendCols;
-        const lx = col * itemW + 10;
-        const ly = chartAreaH + 8 + row * 20;
-        legendItems += `<rect x="${lx}" y="${ly + 2}" width="10" height="10" rx="2" fill="${fill}"/>`;
-        legendItems += `<text x="${lx + 14}" y="${ly + 11}" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(d.label)}</text>`;
-      }
-
       startAngle = endAngle;
     });
+
+    // Legend — centered rows below pct labels
+    if (showLegend) {
+      for (let row = 0; row < legendRows; row++) {
+        const start = row * legendItemsPerRow;
+        const end   = Math.min(start + legendItemsPerRow, data.length);
+        const rowW  = legendItemWidths.slice(start, end).reduce((s, w) => s + w, 0) + (end - start - 1) * legendItemGap;
+        let lx = (W - rowW) / 2;
+        const ly = chartAreaH + pctH + 8 + row * 20;
+        for (let i = start; i < end; i++) {
+          const fill = options?.barColors?.[i] || palette[i % palette.length];
+          legendItems += `<rect x="${lx.toFixed(1)}" y="${(ly + 2).toFixed(1)}" width="10" height="10" rx="2" fill="${fill}"/>`;
+          legendItems += `<text x="${(lx + 14).toFixed(1)}" y="${(ly + 11).toFixed(1)}" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(data[i].label)}</text>`;
+          lx += legendItemWidths[i] + legendItemGap;
+        }
+      }
+    }
+
+    // Percentage labels — centered rows below the pie
+    if (showValues) {
+      for (let row = 0; row < pctRows; row++) {
+        const start = row * pctItemsPerRow;
+        const end   = Math.min(start + pctItemsPerRow, data.length);
+        const rowW  = pctWidths.slice(start, end).reduce((s, w) => s + w, 0) + (end - start - 1) * pctItemGap;
+        let x = (W - rowW) / 2;
+        const y = chartAreaH + 10 + row * 18;
+        for (let i = start; i < end; i++) {
+          const fill = options?.barColors?.[i] || palette[i % palette.length];
+          valueLabels += `<circle cx="${(x + 4).toFixed(1)}" cy="${(y - 3.5).toFixed(1)}" r="4" fill="${fill}"/>`;
+          valueLabels += `<text x="${(x + 14).toFixed(1)}" y="${y}" font-size="11" font-weight="600" font-family="${font}" fill="${textColor}">${escSVG(pctStrings[i])}</text>`;
+          x += pctWidths[i] + pctItemGap;
+        }
+      }
+    }
 
     return (filterDef ? `<defs>${filterDef}</defs>` : '') + `<g${glowAttr}>${slices}</g>${valueLabels}${legendItems}`;
   }
