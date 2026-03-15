@@ -30,14 +30,14 @@ const state = {
   dataStructure: '',
   goal: '',
   theme: {
-    bg: '#ffffff',
-    palette: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'],
-    font: 'Inter',
+    bg: '#EEF5FB',
+    palette: ['#5BADE0', '#3DC4A0', '#E8705A', '#D966A8', '#9070C8', '#6A52A8'],
+    font: "'Graphik', 'Inter', sans-serif",
   },
   openVizId: null,
   vegaViews: {}, // card id → vega view, for re-theming
   savedPalettes: JSON.parse(sessionStorage.getItem('savedPalettes') || '[]'),
-  chartStyle: 'modern',
+  chartStyle: 'journeys',
 };
 
 /* ── Theme presets ───────────────────────────────────────────────────────── */
@@ -63,8 +63,8 @@ const PRESETS = {
     font: 'Inter',
   },
   journeys: {
-    bg: '#F0F7FC',
-    palette: ['#29ABE2', '#26C6A0', '#F44336', '#E91E8C', '#7B3FC4', '#5C2D91'],
+    bg: '#EEF5FB',
+    palette: ['#5BADE0', '#3DC4A0', '#E8705A', '#D966A8', '#9070C8', '#6A52A8'],
     font: "'Graphik', 'Inter', sans-serif",
   },
 };
@@ -84,7 +84,7 @@ const CHART_STYLES = {
   classic:   { name:'Classic',   barRadius:0, lineSmooth:false, lineDots:true,  areaFill:'solid',    gridScale:3,   gridDash:'',    strokeW:1.5, fontOverride:'Georgia, serif',         glow:false, axisLabels:true  },
   neon:      { name:'Neon',      barRadius:1, lineSmooth:true,  lineDots:true,  areaFill:'gradient', gridScale:1,   gridDash:'3 3', strokeW:2,   fontOverride:'"Courier New", monospace', glow:true,  axisLabels:true  },
   editorial: { name:'Editorial', barRadius:0, lineSmooth:false, lineDots:false, areaFill:'solid',    gridScale:5,   gridDash:'',    strokeW:3,   fontOverride:null,                                           glow:false, axisLabels:true  },
-  journeys:  { name:'Journeys', barRadius:12, lineSmooth:true,  lineDots:true,  areaFill:'gradient', gridScale:0,   gridDash:'',    strokeW:2.5, fontOverride:"'Graphik', 'Inter', sans-serif",               glow:false, axisLabels:true  },
+  journeys:  { name:'Journeys', barRadius:12, lineSmooth:true,  lineDots:true,  areaFill:'gradient', gridScale:0,   gridDash:'',    strokeW:2,   fontOverride:"'Graphik', 'Inter', sans-serif",               glow:true,  glowSD:1.5, softPie:true, axisLabels:true  },
 };
 
 /* ── Vega theme builder ──────────────────────────────────────────────────── */
@@ -1680,6 +1680,8 @@ function chartTokens(theme) {
     strokeW:    sty.strokeW,
     gridDash:   sty.gridDash,
     glow:       sty.glow,
+    glowSD:     sty.glowSD || 3,
+    softPie:    sty.softPie || false,
     axisLabels: sty.axisLabels,
   };
 }
@@ -1688,7 +1690,7 @@ function renderBarChartSVG(theme, inputData, options) {
   const W = 560, H = 300;
   const pad = { top: 16, right: 16, bottom: 40, left: 50 };
   const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
-  const { textColor, gridColor, baseColor, font, c0, barRadius, gridDash, axisLabels, glow } = chartTokens(theme);
+  const { textColor, gridColor, baseColor, font, c0, barRadius, gridDash, axisLabels, glow, glowSD } = chartTokens(theme);
 
   const data = (inputData && inputData.length) ? inputData : [
     {l:'Apples',v:85},{l:'Oranges',v:62},{l:'Bananas',v:108},
@@ -1709,7 +1711,7 @@ function renderBarChartSVG(theme, inputData, options) {
   }).join('');
 
   const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
-  const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
 
   const bars = data.map((d, i) => {
     const x = xMid(i) - bW / 2, y = yV(d.v), h = (d.v / max) * cH;
@@ -1731,7 +1733,7 @@ function renderLineChartSVG(theme) {
   const W = 560, H = 300;
   const pad = { top: 20, right: 20, bottom: 40, left: 50 };
   const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
-  const { textColor, gridColor, baseColor, font, c0, lineSmooth, lineDots, areaFill, strokeW, gridDash, axisLabels, glow } = chartTokens(theme);
+  const { textColor, gridColor, baseColor, font, c0, lineSmooth, lineDots, areaFill, strokeW, gridDash, axisLabels, glow, glowSD } = chartTokens(theme);
 
   const data = [
     {l:'Jan',v:42},{l:'Feb',v:55},{l:'Mar',v:50},{l:'Apr',v:68},
@@ -1773,7 +1775,7 @@ function renderLineChartSVG(theme) {
 
   const gid = 'lg' + Math.random().toString(36).slice(2, 7);
   const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
-  const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
   const glowAttr = glow ? ` filter="url(#${fid})"` : '';
 
   const gradDef = areaFill === 'gradient' ? `<linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${c0}" stop-opacity="0.12"/><stop offset="100%" stop-color="${c0}" stop-opacity="0"/></linearGradient>` : '';
@@ -1792,7 +1794,7 @@ function renderScatterChartSVG(theme) {
   const W = 560, H = 300;
   const pad = { top: 20, right: 20, bottom: 40, left: 50 };
   const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
-  const { textColor, gridColor, baseColor, font, c0, gridDash, axisLabels, glow } = chartTokens(theme);
+  const { textColor, gridColor, baseColor, font, c0, gridDash, axisLabels, glow, glowSD } = chartTokens(theme);
   const c1 = theme.palette[1] || c0;
   const c2 = theme.palette[2] || c1;
 
@@ -1822,7 +1824,7 @@ function renderScatterChartSVG(theme) {
   ).join('') : '';
 
   const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
-  const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
   const glowAttr = glow ? ` filter="url(#${fid})"` : '';
 
   const dots = data.map(d =>
@@ -1839,7 +1841,7 @@ function renderAreaChartSVG(theme) {
   const W = 560, H = 300;
   const pad = { top: 20, right: 20, bottom: 40, left: 50 };
   const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
-  const { textColor, gridColor, baseColor, font, c0, lineSmooth, areaFill, strokeW, gridDash, axisLabels, glow } = chartTokens(theme);
+  const { textColor, gridColor, baseColor, font, c0, lineSmooth, areaFill, strokeW, gridDash, axisLabels, glow, glowSD } = chartTokens(theme);
   const c1 = theme.palette[1] || c0;
 
   const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1880,7 +1882,7 @@ function renderAreaChartSVG(theme) {
   const gidA = 'aa' + Math.random().toString(36).slice(2, 7);
   const gidB = 'ab' + Math.random().toString(36).slice(2, 7);
   const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
-  const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
   const glowAttr = glow ? ` filter="url(#${fid})"` : '';
 
   const gradDefs = areaFill === 'gradient' ?
@@ -1904,7 +1906,7 @@ function renderAreaChartSVG(theme) {
 function renderPieChartSVG(theme) {
   const W = 560, H = 300;
   const cx = W / 2, cy = H / 2, r = 102, lr = 122;
-  const { font, glow, axisLabels } = chartTokens(theme);
+  const { font, glow, glowSD, softPie, axisLabels } = chartTokens(theme);
   const palette = theme.palette;
 
   const data = [
@@ -1938,20 +1940,21 @@ function renderPieChartSVG(theme) {
   }).join('') : '';
 
   const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
-  const filterDef = glow ? `<filter id="${fid}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const filterDef = glow ? `<filter id="${fid}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
   const glowAttr = glow ? ` filter="url(#${fid})"` : '';
 
+  const softCentre = softPie ? `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="10" fill="${theme.bg}"/>` : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%">` +
     `<rect width="${W}" height="${H}" fill="${theme.bg}"/>` +
     (filterDef ? `<defs>${filterDef}</defs>` : '') +
-    `<g${glowAttr}>${sliceSVG}</g>${labelsSVG}</svg>`;
+    `<g${glowAttr}>${sliceSVG}</g>${softCentre}${labelsSVG}</svg>`;
 }
 
 function renderDonutChartSVG(theme) {
   const W = 560, H = 300;
   const cx = W / 2, cy = H / 2;
   const r = Math.min(cx, cy) - 22, innerR = r * 0.54;
-  const { font, textColor, glow } = chartTokens(theme);
+  const { font, textColor, glow, glowSD } = chartTokens(theme);
   const palette = theme.palette;
 
   const data = [
@@ -1983,7 +1986,7 @@ function renderDonutChartSVG(theme) {
     `<text x="${cx}" y="${cy + 14}" text-anchor="middle" font-size="11" font-family="${font}" fill="${textColor}" opacity="0.45">total</text>`;
 
   const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
-  const filterDef = glow ? `<filter id="${fid}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const filterDef = glow ? `<filter id="${fid}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
   const glowAttr = glow ? ` filter="url(#${fid})"` : '';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%">` +
@@ -1996,7 +1999,7 @@ function renderGroupedBarChartSVG(theme) {
   const W = 560, H = 300;
   const pad = { top: 20, right: 20, bottom: 40, left: 50 };
   const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
-  const { textColor, gridColor, baseColor, font, barRadius, gridDash, axisLabels, glow } = chartTokens(theme);
+  const { textColor, gridColor, baseColor, font, barRadius, gridDash, axisLabels, glow, glowSD } = chartTokens(theme);
   const colors = [
     theme.palette[0],
     theme.palette[1] || theme.palette[0],
@@ -2024,7 +2027,7 @@ function renderGroupedBarChartSVG(theme) {
   }).join('');
 
   const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
-  const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
 
   const bars = groups.map((g, gi) => {
     const gx = groupX(gi) + gap;
@@ -2380,7 +2383,7 @@ function renderBubbleChartSVG(theme) {
   const W = 560, H = 300;
   const pad = { top: 20, right: 20, bottom: 36, left: 44 };
   const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
-  const { textColor, gridColor, baseColor, font, c0, gridDash, axisLabels, glow } = chartTokens(theme);
+  const { textColor, gridColor, baseColor, font, c0, gridDash, axisLabels, glow, glowSD } = chartTokens(theme);
   const c1 = theme.palette[1]||c0, c2 = theme.palette[2]||c1;
   const bubbles = [
     {x:.12,y:.65,r:14,ci:0},{x:.28,y:.28,r:28,ci:1},{x:.44,y:.58,r:10,ci:2},
@@ -2394,7 +2397,7 @@ function renderBubbleChartSVG(theme) {
     return `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="${gridColor}" stroke-width="1"${dash}/>`;
   }).join('');
   const fid = glow ? 'gf'+Math.random().toString(36).slice(2,7) : '';
-  const filterDef = glow ? `<filter id="${fid}"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const filterDef = glow ? `<filter id="${fid}"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
   const glowAttr = glow ? ` filter="url(#${fid})"` : '';
   const circles = bubbles.map(b =>
     `<circle cx="${(pad.left+b.x*cW).toFixed(1)}" cy="${(pad.top+b.y*cH).toFixed(1)}" r="${b.r}" fill="${colors[b.ci]}" fill-opacity="0.72" stroke="${theme.bg}" stroke-width="1.5"${glowAttr}/>`
@@ -2453,7 +2456,7 @@ function renderStripPlotSVG(theme) {
 
 function renderSparklineSVG(theme) {
   const W = 560, H = 300;
-  const { c0, lineSmooth, strokeW, glow } = chartTokens(theme);
+  const { c0, lineSmooth, strokeW, glow, glowSD } = chartTokens(theme);
   // Three sparklines side by side
   const series = [
     [42,55,48,62,58,72,65,80,75,88],
@@ -2465,7 +2468,7 @@ function renderSparklineSVG(theme) {
   const dark = isColorDark(theme.bg);
   const textColor = dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.32)';
   const fid = glow ? 'gf'+Math.random().toString(36).slice(2,7) : '';
-  const filterDef = glow ? `<filter id="${fid}"><feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const filterDef = glow ? `<filter id="${fid}"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
   const glowAttr = glow ? ` filter="url(#${fid})"` : '';
   let content = '';
   series.forEach((data,si) => {
@@ -2496,7 +2499,7 @@ function renderStepChartSVG(theme) {
   const W = 560, H = 300;
   const pad = { top: 20, right: 20, bottom: 36, left: 44 };
   const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
-  const { textColor, gridColor, baseColor, font, c0, strokeW, gridDash, axisLabels, glow } = chartTokens(theme);
+  const { textColor, gridColor, baseColor, font, c0, strokeW, gridDash, axisLabels, glow, glowSD } = chartTokens(theme);
   const data = [30,30,48,48,62,62,55,55,74,74,88,88];
   const labels = ['Jan','','Mar','','May','','Jul','','Sep','','Nov',''];
   const { max, ticks } = niceScale(Math.max(...data));
@@ -2513,7 +2516,7 @@ function renderStepChartSVG(theme) {
   }).join('');
   const xLbls = axisLabels ? labels.map((l,i) => l ? `<text x="${xP(i).toFixed(1)}" y="${(pad.top+cH+16).toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${l}</text>` : '').join('') : '';
   const fid = glow ? 'gf'+Math.random().toString(36).slice(2,7) : '';
-  const filterDef = glow ? `<filter id="${fid}"><feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const filterDef = glow ? `<filter id="${fid}"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%"><rect width="${W}" height="${H}" fill="${theme.bg}"/>${filterDef?`<defs>${filterDef}</defs>`:''}${grid}<path d="${pathD}" stroke="${c0}" stroke-width="${strokeW}" fill="none" stroke-linecap="square"${glow?` filter="url(#${fid})"`:''}/>${xLbls}</svg>`;
 }
 
@@ -2755,7 +2758,7 @@ function renderDensityPlotSVG(theme) {
   const W = 560, H = 300;
   const pad = { top: 20, right: 20, bottom: 36, left: 44 };
   const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
-  const { gridColor, c0, strokeW, areaFill, glow } = chartTokens(theme);
+  const { gridColor, c0, strokeW, areaFill, glow, glowSD } = chartTokens(theme);
   const c1 = theme.palette[1]||c0;
   // Two overlapping density curves
   const gauss = (x, mu, sig) => Math.exp(-0.5*((x-mu)/sig)**2);
@@ -2771,7 +2774,7 @@ function renderDensityPlotSVG(theme) {
   const a0 = p0+` L${xP(n-1).toFixed(1)},${base} L${xP(0).toFixed(1)},${base} Z`;
   const a1 = p1+` L${xP(n-1).toFixed(1)},${base} L${xP(0).toFixed(1)},${base} Z`;
   const fid = glow ? 'gf'+Math.random().toString(36).slice(2,7) : '';
-  const filterDef = glow ? `<filter id="${fid}"><feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+  const filterDef = glow ? `<filter id="${fid}"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
   const af0 = areaFill !== 'none' ? `<path d="${a0}" fill="${c0}" fill-opacity="0.18"/>` : '';
   const af1 = areaFill !== 'none' ? `<path d="${a1}" fill="${c1}" fill-opacity="0.18"/>` : '';
   const grid = `<line x1="${pad.left}" y1="${(pad.top+cH).toFixed(1)}" x2="${W-pad.right}" y2="${(pad.top+cH).toFixed(1)}" stroke="${gridColor}" stroke-width="1"/>`;

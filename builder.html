@@ -229,7 +229,7 @@
     bold:     { bg:'#fff7f7', palette:['#EF4444','#F97316','#FBBF24','#84CC16','#06B6D4','#8B5CF6'], font:'Inter' },
     earth:    { bg:'#faf7f2', palette:['#92400E','#B45309','#D97706','#65A30D','#047857','#6B7280'], font:"'Georgia', serif" },
     dark:     { bg:'#111111', palette:['#CCCCCC','#999999','#666666','#444444','#EEEEEE','#222222'], font:'Inter' },
-    journeys: { bg:'#F0F7FC', palette:['#29ABE2','#26C6A0','#F44336','#E91E8C','#7B3FC4','#5C2D91'], font:"'Inter', sans-serif" },
+    journeys: { bg:'#EEF5FB', palette:['#5BADE0','#3DC4A0','#E8705A','#D966A8','#9070C8','#6A52A8'], font:"'Inter', sans-serif" },
   };
 
   const CHART_STYLES = {
@@ -238,7 +238,7 @@
     classic:   { barRadius:0,  gridScale:3,  gridDash:'',    strokeW:1.5, fontOverride:'Georgia, serif',             glow:false, axisLabels:true  },
     neon:      { barRadius:1,  gridScale:1,  gridDash:'3 3', strokeW:2,   fontOverride:'"Courier New", monospace',   glow:true,  axisLabels:true  },
     editorial: { barRadius:0,  gridScale:5,  gridDash:'',    strokeW:3,   fontOverride:null,                         glow:false, axisLabels:true  },
-    journeys:  { barRadius:12, gridScale:0,  gridDash:'',    strokeW:2.5, fontOverride:"'Inter', sans-serif",        glow:false, axisLabels:true  },
+    journeys:  { barRadius:12, gridScale:0,  gridDash:'',    strokeW:2,   fontOverride:"'Inter', sans-serif",        glow:true,  glowSD:1.5, softPie:true, axisLabels:true  },
   };
 
   function isColorDark(hex) {
@@ -291,6 +291,8 @@
       barRadius:  sty.barRadius,
       gridDash:   sty.gridDash,
       glow:       sty.glow,
+      glowSD:     sty.glowSD || 3,
+      softPie:    sty.softPie || false,
       axisLabels: sty.axisLabels,
     };
   }
@@ -302,7 +304,7 @@
     const cW = W - pad.left - pad.right;
     const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
     const tok = chartTokens(effectiveTheme, chartStyle);
-    const { gridColor, baseColor, font, c0, barRadius, gridDash, glow, axisLabels } = tok;
+    const { gridColor, baseColor, font, c0, barRadius, gridDash, glow, glowSD, axisLabels } = tok;
     const textColor = options?.fontColor || tok.textColor;
 
     // Scale — respect custom yMin/yMax if provided
@@ -344,7 +346,7 @@
 
     const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
     const filterDef = glow
-      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
+      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
       : '';
 
     const bars = data.map((d, i) => {
@@ -393,7 +395,7 @@
     const W = 560, H = 300;
     const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
     const tok = chartTokens(effectiveTheme, chartStyle);
-    const { gridColor, baseColor, font, c0, gridDash, glow, axisLabels } = tok;
+    const { gridColor, baseColor, font, c0, gridDash, glow, glowSD, axisLabels } = tok;
     const textColor = options?.fontColor || tok.textColor;
 
     if (!data.length) {
@@ -456,7 +458,7 @@
       }).join('');
 
     const fid = glow ? 'bbl' + Math.random().toString(36).slice(2, 6) : '';
-    const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+    const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
 
     const bubbles = data.map((d, i) => {
       const cx = scX(+d.x || 0), cy = scY(+d.y || 0);
@@ -503,7 +505,7 @@
     const pad = { top: 16, right: 16, bottom: 40, left: 50 };
     const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
     const tok = chartTokens(effectiveTheme, chartStyle);
-    const { gridColor, baseColor, font, c0, glow, axisLabels, gridDash } = tok;
+    const { gridColor, baseColor, font, c0, glow, glowSD, axisLabels, gridDash } = tok;
     const textColor = options?.fontColor || tok.textColor;
     const dotR = 6;
 
@@ -544,7 +546,7 @@
 
     const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
     const filterDef = glow
-      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
+      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
       : '';
 
     const lollipops = data.map((d, i) => {
@@ -590,7 +592,7 @@
     const pad = { top: 12, right: 20, bottom: 36, left: 50 };
     const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
     const tok = chartTokens(effectiveTheme, chartStyle);
-    const { gridColor, baseColor, font, c0, glow, axisLabels, gridDash } = tok;
+    const { gridColor, baseColor, font, c0, glow, glowSD, axisLabels, gridDash } = tok;
     const textColor = options?.fontColor || tok.textColor;
     const dotR = 6;
 
@@ -634,7 +636,7 @@
 
     const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
     const filterDef = glow
-      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
+      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
       : '';
 
     const dots = data.map((d, i) => {
@@ -674,7 +676,7 @@
     const pad = { top: 16, right: 16, bottom: 40, left: 50 };
     const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
     const tok = chartTokens(effectiveTheme, chartStyle);
-    const { gridColor, baseColor, font, c0, glow, axisLabels, gridDash } = tok;
+    const { gridColor, baseColor, font, c0, glow, glowSD, axisLabels, gridDash } = tok;
     const textColor = options?.fontColor || tok.textColor;
 
     const dataMax = Math.max(...data.map(d => d.value), 1);
@@ -737,7 +739,7 @@
 
     const fid = glow ? 'gf' + Math.random().toString(36).slice(2, 7) : '';
     const filterDef = glow
-      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
+      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
       : '';
     const glowAttr = glow ? ` filter="url(#${fid})"` : '';
 
@@ -781,7 +783,7 @@
     const W = 560, H = 300;
     const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
     const tok = chartTokens(effectiveTheme, chartStyle);
-    const { font, glow } = tok;
+    const { font, glow, glowSD, softPie } = tok;
     const textColor = options?.fontColor || tok.textColor;
     const palette = effectiveTheme.palette || PRESETS.default.palette;
 
@@ -827,7 +829,7 @@
 
     const fid = glow ? 'pie' + Math.random().toString(36).slice(2, 6) : '';
     const filterDef = glow
-      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
+      ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
       : '';
     const glowAttr = glow ? ` filter="url(#${fid})"` : '';
 
@@ -893,7 +895,11 @@
       }
     }
 
-    return (filterDef ? `<defs>${filterDef}</defs>` : '') + `<g${glowAttr}>${slices}</g>${valueLabels}${legendItems}`;
+    // softPie: small bg-coloured disc covers the harsh centre point where pie slices meet
+    const softCentre = (softPie && variant === 'pie')
+      ? `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="10" fill="${effectiveTheme.bg}"/>`
+      : '';
+    return (filterDef ? `<defs>${filterDef}</defs>` : '') + `<g${glowAttr}>${slices}</g>${softCentre}${valueLabels}${legendItems}`;
   }
 
   /* Scatter plot — data rows: { x, y, label? } */
@@ -901,7 +907,7 @@
     const W = 560, H = 300;
     const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
     const tok = chartTokens(effectiveTheme, chartStyle);
-    const { gridColor, baseColor, font, c0, gridDash, glow, axisLabels } = tok;
+    const { gridColor, baseColor, font, c0, gridDash, glow, glowSD, axisLabels } = tok;
     const textColor = options?.fontColor || tok.textColor;
     const dotR = 5;
 
@@ -955,7 +961,7 @@
       }).join('');
 
     const fid = glow ? 'sct' + Math.random().toString(36).slice(2, 6) : '';
-    const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+    const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
 
     const dots = data.map((d, i) => {
       const px = scX(+d.x || 0), py = scY(+d.y || 0);
@@ -1138,21 +1144,39 @@
   const _urlChart = new URLSearchParams(window.location.search).get('chart');
   if (!saved && !_urlChart) { window.location.href = 'index.html'; }
 
-  const loaded = saved ? JSON.parse(saved) : { chartId: _urlChart, data: [], theme: PRESETS.default, chartStyle: 'modern' };
+  const loaded = saved ? JSON.parse(saved) : { chartId: _urlChart, data: [], theme: PRESETS.journeys, chartStyle: 'journeys' };
 
   const chartId = loaded.chartId || 'bar-chart';
   const schema  = (typeof CHART_SCHEMAS !== 'undefined' && CHART_SCHEMAS[chartId]) || null;
 
   const bState = {
     data:       loaded.data       || [],
-    theme:      loaded.theme      || PRESETS.default,
-    chartStyle: loaded.chartStyle || 'modern',
+    theme:      loaded.theme      || PRESETS.journeys,
+    chartStyle: loaded.chartStyle || 'journeys',
     options: { title: '', subtitle: '', source: '', logoDataUrl: null, xLabel: '', yLabel: '', fontColor: '', bgColor: '', logoSize: 12, barColors: [], selectedBar: -1, yMin: '', yMax: '', xMin: '', xMax: '', showValues: true, showLegend: true },
   };
 
   // Normalize legacy bar-chart data format { l, v } → { label, value }
   if (chartId === 'bar-chart' && bState.data.length && bState.data[0].l !== undefined) {
     bState.data = bState.data.map(r => ({ label: r.l ?? '', value: r.v ?? 0 }));
+  }
+
+  // Seed data — used when the builder opens with no data (e.g. direct URL access)
+  const DEFAULT_DATA = {
+    'bar-chart':      [{ label: 'North America', value: 142 }, { label: 'Europe', value: 118 }, { label: 'Asia Pacific', value: 203 }, { label: 'Latin America', value: 74 }, { label: 'Middle East', value: 51 }, { label: 'Africa', value: 38 }],
+    'lollipop-chart': [{ label: 'North America', value: 142 }, { label: 'Europe', value: 118 }, { label: 'Asia Pacific', value: 203 }, { label: 'Latin America', value: 74 }, { label: 'Middle East', value: 51 }, { label: 'Africa', value: 38 }],
+    'dot-plot':       [{ label: 'North America', value: 142 }, { label: 'Europe', value: 118 }, { label: 'Asia Pacific', value: 203 }, { label: 'Latin America', value: 74 }, { label: 'Middle East', value: 51 }, { label: 'Africa', value: 38 }],
+    'pie-chart':      [{ label: 'Direct', value: 38 }, { label: 'Organic Search', value: 27 }, { label: 'Social', value: 18 }, { label: 'Referral', value: 11 }, { label: 'Other', value: 6 }],
+    'donut-chart':    [{ label: 'Direct', value: 38 }, { label: 'Organic Search', value: 27 }, { label: 'Social', value: 18 }, { label: 'Referral', value: 11 }, { label: 'Other', value: 6 }],
+    'line-chart':     [{ date: '2024-01', value: 84 }, { date: '2024-02', value: 91 }, { date: '2024-03', value: 78 }, { date: '2024-04', value: 105 }, { date: '2024-05', value: 117 }, { date: '2024-06', value: 112 }, { date: '2024-07', value: 130 }, { date: '2024-08', value: 124 }],
+    'area-chart':     [{ date: '2024-01', value: 84 }, { date: '2024-02', value: 91 }, { date: '2024-03', value: 78 }, { date: '2024-04', value: 105 }, { date: '2024-05', value: 117 }, { date: '2024-06', value: 112 }, { date: '2024-07', value: 130 }, { date: '2024-08', value: 124 }],
+    'step-chart':     [{ date: '2024-01', value: 84 }, { date: '2024-02', value: 91 }, { date: '2024-03', value: 78 }, { date: '2024-04', value: 105 }, { date: '2024-05', value: 117 }, { date: '2024-06', value: 112 }, { date: '2024-07', value: 130 }, { date: '2024-08', value: 124 }],
+    'scatter-plot':   [{ x: 12, y: 34, label: 'A' }, { x: 28, y: 52, label: 'B' }, { x: 45, y: 41, label: 'C' }, { x: 56, y: 78, label: 'D' }, { x: 63, y: 55, label: 'E' }, { x: 71, y: 88, label: 'F' }, { x: 82, y: 67, label: 'G' }, { x: 91, y: 94, label: 'H' }],
+    'bubble-chart':   [{ x: 25, y: 42, size: 18, label: 'Alpha' }, { x: 40, y: 60, size: 32, label: 'Beta' }, { x: 55, y: 35, size: 12, label: 'Gamma' }, { x: 68, y: 72, size: 45, label: 'Delta' }, { x: 77, y: 50, size: 22, label: 'Epsilon' }, { x: 88, y: 80, size: 60, label: 'Zeta' }],
+  };
+
+  if (!bState.data.length && DEFAULT_DATA[chartId]) {
+    bState.data = DEFAULT_DATA[chartId];
   }
 
   // Update page title from schema
