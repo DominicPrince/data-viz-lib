@@ -238,7 +238,7 @@
     classic:   { barRadius:0,  gridScale:3,  gridDash:'',    strokeW:1.5, fontOverride:'Georgia, serif',             glow:false, axisLabels:true  },
     neon:      { barRadius:1,  gridScale:1,  gridDash:'3 3', strokeW:2,   fontOverride:'"Courier New", monospace',   glow:true,  axisLabels:true  },
     editorial: { barRadius:0,  gridScale:5,  gridDash:'',    strokeW:3,   fontOverride:null,                         glow:false, axisLabels:true  },
-    journeys:  { barRadius:12, gridScale:0,  gridDash:'',    strokeW:2,   fontOverride:"'Inter', sans-serif",        glow:true,  glowSD:1.5, softPie:true, axisLabels:true  },
+    journeys:  { barRadius:12, gridScale:0,  gridDash:'',    strokeW:2,   fontOverride:"'Inter', sans-serif",        glow:true,  glowSD:1.5, axisLabels:true  },
   };
 
   function isColorDark(hex) {
@@ -292,7 +292,6 @@
       gridDash:   sty.gridDash,
       glow:       sty.glow,
       glowSD:     sty.glowSD || 3,
-      softPie:    sty.softPie || false,
       axisLabels: sty.axisLabels,
     };
   }
@@ -783,7 +782,7 @@
     const W = 560, H = 300;
     const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
     const tok = chartTokens(effectiveTheme, chartStyle);
-    const { font, glow, glowSD, softPie } = tok;
+    const { font, glow, glowSD } = tok;
     const textColor = options?.fontColor || tok.textColor;
     const palette = effectiveTheme.palette || PRESETS.default.palette;
 
@@ -833,7 +832,7 @@
       : '';
     const glowAttr = glow ? ` filter="url(#${fid})"` : '';
 
-    let slices = '', valueLabels = '', legendItems = '';
+    let sliceFills = '', sliceBounds = [], valueLabels = '', legendItems = '';
     let startAngle = -Math.PI / 2;
 
     data.forEach((d, i) => {
@@ -856,10 +855,24 @@
         d_attr = `M ${cx},${cy} L ${x1.toFixed(2)},${y1.toFixed(2)} A ${R},${R} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z`;
       }
 
-      slices += `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}" stroke="${effectiveTheme.bg}" stroke-width="${isSelected ? 2.5 : 1}"/>`;
-
+      sliceFills += `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}"/>`;
+      sliceBounds.push(startAngle);
       startAngle = endAngle;
     });
+
+    // Separators drawn short of outer edge and centre — leaves an uncut rim that
+    // visually softens the harsh point where dividing lines meet the circle.
+    const sepGapOuter = 9;
+    const sepGapInner = variant === 'donut' ? innerR + 5 : 5;
+    const sliceSeps = sliceBounds.map(angle => {
+      const x0 = (cx + sepGapInner * Math.cos(angle)).toFixed(1);
+      const y0 = (cy + sepGapInner * Math.sin(angle)).toFixed(1);
+      const x1 = (cx + (R - sepGapOuter) * Math.cos(angle)).toFixed(1);
+      const y1 = (cy + (R - sepGapOuter) * Math.sin(angle)).toFixed(1);
+      return `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${effectiveTheme.bg}" stroke-width="1.5" stroke-linecap="round"/>`;
+    }).join('');
+
+    const slices = sliceFills + sliceSeps;
 
     // Legend — centered rows below pct labels
     if (showLegend) {
@@ -895,11 +908,7 @@
       }
     }
 
-    // softPie: small bg-coloured disc covers the harsh centre point where pie slices meet
-    const softCentre = (softPie && variant === 'pie')
-      ? `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="10" fill="${effectiveTheme.bg}"/>`
-      : '';
-    return (filterDef ? `<defs>${filterDef}</defs>` : '') + `<g${glowAttr}>${slices}</g>${softCentre}${valueLabels}${legendItems}`;
+    return (filterDef ? `<defs>${filterDef}</defs>` : '') + `<g${glowAttr}>${slices}</g>${valueLabels}${legendItems}`;
   }
 
   /* Scatter plot — data rows: { x, y, label? } */
