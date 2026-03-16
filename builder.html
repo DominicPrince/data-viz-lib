@@ -929,12 +929,10 @@
       const tickEndX = elbowX + dir * 8;
       const anchor   = dir > 0 ? 'start' : 'end';
       const stroke   = `stroke="${textColor}" stroke-width="1" stroke-opacity="0.4" stroke-linecap="round"`;
-      const elbowSeg = Math.abs(adjustedY - naturalY) > 1
-        ? `<line x1="${elbowX.toFixed(1)}" y1="${naturalY.toFixed(1)}" x2="${elbowX.toFixed(1)}" y2="${adjustedY.toFixed(1)}" ${stroke}/>`
-        : '';
+      // Single diagonal from pie rim straight to the (deconflicted) label position,
+      // then a short horizontal tick — no reverse elbow, no spike.
       valueLabels +=
-        `<line x1="${startX.toFixed(1)}" y1="${startY.toFixed(1)}" x2="${elbowX.toFixed(1)}" y2="${naturalY.toFixed(1)}" ${stroke}/>` +
-        elbowSeg +
+        `<line x1="${startX.toFixed(1)}" y1="${startY.toFixed(1)}" x2="${elbowX.toFixed(1)}" y2="${adjustedY.toFixed(1)}" ${stroke}/>` +
         `<line x1="${elbowX.toFixed(1)}" y1="${adjustedY.toFixed(1)}" x2="${tickEndX.toFixed(1)}" y2="${adjustedY.toFixed(1)}" ${stroke}/>` +
         `<text x="${(tickEndX + dir * 3).toFixed(1)}" y="${(adjustedY + 4).toFixed(1)}" font-size="10" font-weight="600" font-family="${font}" fill="${textColor}" fill-opacity="0.65" text-anchor="${anchor}">${escSVG(pctStr)}</text>`;
     });
