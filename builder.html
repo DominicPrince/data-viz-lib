@@ -924,25 +924,17 @@
 
     // Render outside labels (positions are relative to the pie; topPad is applied via SVG translate)
     outsideLabels.forEach(({ midAngle, elbowX, naturalY, adjustedY, dir, pctStr }) => {
-      // Radial exit point — short segment pointing directly away from the slice centre.
-      // Always visually tied to the correct slice regardless of where the label ends up.
-      const exitX    = cx + (R + 18) * Math.cos(midAngle);
-      const exitY    = cy + (R + 18) * Math.sin(midAngle);
-      const rimX     = cx + (R + 10) * Math.cos(midAngle);
-      const rimY     = cy + (R + 10) * Math.sin(midAngle);
-      const tickEndX = elbowX + dir * 8;
-      const anchor   = dir > 0 ? 'start' : 'end';
-      const stroke   = `stroke="${textColor}" stroke-width="1" stroke-opacity="0.4" stroke-linecap="round"`;
+      const rimX      = cx + (R + 10) * Math.cos(midAngle);
+      const rimY      = cy + (R + 10) * Math.sin(midAngle);
+      const shelfEndX = elbowX + dir * 10;
+      const anchor    = dir > 0 ? 'start' : 'end';
+      const stroke    = `stroke="${textColor}" stroke-width="1" stroke-opacity="0.4" stroke-linecap="round"`;
       valueLabels +=
-        // 1. Short radial exit — unambiguously identifies the slice
-        `<line x1="${rimX.toFixed(1)}" y1="${rimY.toFixed(1)}" x2="${exitX.toFixed(1)}" y2="${exitY.toFixed(1)}" ${stroke}/>` +
-        // 2. Diagonal connector to deconflicted label y (skipped if label is right at the exit)
-        (Math.abs(exitY - adjustedY) > 2 || Math.abs(exitX - elbowX) > 2
-          ? `<line x1="${exitX.toFixed(1)}" y1="${exitY.toFixed(1)}" x2="${elbowX.toFixed(1)}" y2="${adjustedY.toFixed(1)}" ${stroke}/>`
-          : '') +
-        // 3. Horizontal tick + label text
-        `<line x1="${elbowX.toFixed(1)}" y1="${adjustedY.toFixed(1)}" x2="${tickEndX.toFixed(1)}" y2="${adjustedY.toFixed(1)}" ${stroke}/>` +
-        `<text x="${(tickEndX + dir * 3).toFixed(1)}" y="${(adjustedY + 4).toFixed(1)}" font-size="10" font-weight="600" font-family="${font}" fill="${textColor}" fill-opacity="0.65" text-anchor="${anchor}">${escSVG(pctStr)}</text>`;
+        // 1. Horizontal shelf out from the elbow to the label
+        `<line x1="${elbowX.toFixed(1)}" y1="${adjustedY.toFixed(1)}" x2="${shelfEndX.toFixed(1)}" y2="${adjustedY.toFixed(1)}" ${stroke}/>` +
+        // 2. Diagonal from the elbow back to the slice rim
+        `<line x1="${elbowX.toFixed(1)}" y1="${adjustedY.toFixed(1)}" x2="${rimX.toFixed(1)}" y2="${rimY.toFixed(1)}" ${stroke}/>` +
+        `<text x="${(shelfEndX + dir * 3).toFixed(1)}" y="${(adjustedY + 4).toFixed(1)}" font-size="10" font-weight="600" font-family="${font}" fill="${textColor}" fill-opacity="0.65" text-anchor="${anchor}">${escSVG(pctStr)}</text>`;
     });
 
     // Outer ring: a bg-coloured band around the circumference that covers the
