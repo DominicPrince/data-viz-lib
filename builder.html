@@ -779,7 +779,7 @@
 
   /* variant: 'pie' | 'donut' */
   function renderPieChartInner(theme, data, chartStyle, options, variant = 'pie') {
-    const W = 560, H = 320;
+    const W = 560;
     const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
     const tok = chartTokens(effectiveTheme, chartStyle);
     const { font, glow, glowSD } = tok;
@@ -787,12 +787,12 @@
     const palette = effectiveTheme.palette || PRESETS.default.palette;
 
     if (!data.length) {
-      return `<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="13" font-family="${font}" fill="${textColor}">Add data points to see the chart</text>`;
+      return { content: `<text x="${W/2}" y="150" text-anchor="middle" font-size="13" font-family="${font}" fill="${textColor}">Add data points to see the chart</text>`, h: 300 };
     }
 
     const total = data.reduce((s, d) => s + Math.max(+d.value || 0, 0), 0);
     if (total === 0) {
-      return `<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="13" font-family="${font}" fill="${textColor}">All values are zero</text>`;
+      return { content: `<text x="${W/2}" y="150" text-anchor="middle" font-size="13" font-family="${font}" fill="${textColor}">All values are zero</text>`, h: 300 };
     }
 
     const showValues = options?.showValues !== false;
@@ -809,9 +809,13 @@
     const legendRows = showLegend ? Math.ceil(data.length / legendItemsPerRow) : 0;
     const legendH    = showLegend ? legendRows * 20 + 10 : 0;
 
+    // Fixed height for the pie circle area; legend grows below it
+    const pieAreaH = 280;
+    const H = pieAreaH + legendH + 16; // 16px bottom padding
+
     // Leave space around pie for outside leader-line labels
     const labelPad = 44;
-    const chartAreaH = H - legendH;
+    const chartAreaH = pieAreaH;
     const cx = W / 2;
     const cy = chartAreaH / 2;
     const R  = Math.max(Math.min(W / 2 - labelPad, chartAreaH / 2 - labelPad), 30);
@@ -906,7 +910,7 @@
       }
     }
 
-    return (filterDef ? `<defs>${filterDef}</defs>` : '') + `<g${glowAttr}>${slices}</g>${outerRing}${valueLabels}${legendItems}`;
+    return { content: (filterDef ? `<defs>${filterDef}</defs>` : '') + `<g${glowAttr}>${slices}</g>${outerRing}${valueLabels}${legendItems}`, h: H };
   }
 
   /* Scatter plot — data rows: { x, y, label? } */
@@ -1069,8 +1073,8 @@
   }
 
   /* Wraps chart inner content with title / subtitle / source / logo */
-  function composeSVG(innerContent, state) {
-    const W = 560, chartH = 300;
+  function composeSVG(innerContent, state, chartH = 300) {
+    const W = 560;
     const { theme, options, chartStyle } = state;
     const { title, subtitle, source, logoDataUrl } = options;
     const bg = options?.bgColor || theme.bg;
@@ -1234,15 +1238,17 @@
     } else if (chartId === 'step-chart') {
       inner = renderLineChartInner(bState.theme, bState.data, bState.chartStyle, bState.options, 'step');
     } else if (chartId === 'pie-chart') {
-      inner = renderPieChartInner(bState.theme, bState.data, bState.chartStyle, bState.options, 'pie');
+      const res = renderPieChartInner(bState.theme, bState.data, bState.chartStyle, bState.options, 'pie');
+      currentSVG = composeSVG(res.content, bState, res.h);
     } else if (chartId === 'donut-chart') {
-      inner = renderPieChartInner(bState.theme, bState.data, bState.chartStyle, bState.options, 'donut');
+      const res = renderPieChartInner(bState.theme, bState.data, bState.chartStyle, bState.options, 'donut');
+      currentSVG = composeSVG(res.content, bState, res.h);
     } else if (chartId === 'scatter-plot') {
       inner = renderScatterPlotInner(bState.theme, bState.data, bState.chartStyle, bState.options);
     } else {
       inner = renderBarChartInner(bState.theme, bState.data, bState.chartStyle, bState.options);
     }
-    currentSVG = composeSVG(inner, bState);
+    if (inner !== undefined) currentSVG = composeSVG(inner, bState);
     document.getElementById('builder-preview').innerHTML = currentSVG;
   }
 
