@@ -779,7 +779,7 @@
 
   /* variant: 'pie' | 'donut' */
   function renderPieChartInner(theme, data, chartStyle, options, variant = 'pie') {
-    const W = 560, H = 300;
+    const W = 560, H = 320;
     const effectiveTheme = options?.bgColor ? { ...theme, bg: options.bgColor } : theme;
     const tok = chartTokens(effectiveTheme, chartStyle);
     const { font, glow, glowSD } = tok;
@@ -798,32 +798,23 @@
     const showValues = options?.showValues !== false;
     const showLegend = options?.showLegend !== false;
 
-    // Pre-measure percentage label widths for centered row layout
-    const pctStrings = data.map(d => Math.round(Math.max(+d.value || 0, 0) / total * 100) + '%');
+    // Pre-measure legend label widths for centered row layout
     const _can = document.createElement('canvas');
     const _ctx = _can.getContext('2d');
-    _ctx.font = `600 11px ${font}`;
-    const pctItemGap = 16;
-    const pctDotW    = 18; // dot (8px) + gap (6px) + trailing pad (4px)
-    const pctWidths  = pctStrings.map(s => Math.ceil(_ctx.measureText(s).width) + pctDotW);
-
-    const pctItemsPerRow = Math.min(data.length, 4);
-    const pctRows = showValues ? Math.ceil(data.length / pctItemsPerRow) : 0;
-    const pctH    = showValues ? pctRows * 18 + 10 : 0;
-
-    // Pre-measure legend label widths for centered row layout
     _ctx.font = `11px ${font}`;
-    const legendItemGap      = 16;
-    const legendSquareW      = 14; // 10px square + 4px gap
-    const legendItemWidths   = data.map(d => legendSquareW + Math.ceil(_ctx.measureText(d.label).width));
-    const legendItemsPerRow  = Math.min(data.length, 4);
+    const legendItemGap     = 16;
+    const legendSquareW     = 14;
+    const legendItemWidths  = data.map(d => legendSquareW + Math.ceil(_ctx.measureText(d.label).width));
+    const legendItemsPerRow = Math.min(data.length, 4);
     const legendRows = showLegend ? Math.ceil(data.length / legendItemsPerRow) : 0;
     const legendH    = showLegend ? legendRows * 20 + 10 : 0;
 
-    const chartAreaH = H - pctH - legendH;
+    // Leave space around pie for outside leader-line labels
+    const labelPad = 44;
+    const chartAreaH = H - legendH;
     const cx = W / 2;
     const cy = chartAreaH / 2;
-    const R  = Math.min(W / 2, chartAreaH / 2) - 18;
+    const R  = Math.max(Math.min(W / 2 - labelPad, chartAreaH / 2 - labelPad), 30);
     const innerR = variant === 'donut' ? R * 0.5 : 0;
 
     const fid = glow ? 'pie' + Math.random().toString(36).slice(2, 6) : '';
@@ -834,8 +825,8 @@
 
     let valueLabels = '', legendItems = '';
     let startAngle = -Math.PI / 2;
-
     let slices = '';
+
     data.forEach((d, i) => {
       const val        = Math.max(+d.value || 0, 0);
       const sliceAngle = (val / total) * 2 * Math.PI;
@@ -843,6 +834,7 @@
       const fill       = options?.barColors?.[i] || palette[i % palette.length];
       const isSelected = options?.selectedBar === i;
       const largeArc   = sliceAngle > Math.PI ? 1 : 0;
+      const midAngle   = startAngle + sliceAngle / 2;
 
       const x1 = cx + R * Math.cos(startAngle), y1 = cy + R * Math.sin(startAngle);
       const x2 = cx + R * Math.cos(endAngle),   y2 = cy + R * Math.sin(endAngle);
@@ -856,45 +848,60 @@
         d_attr = `M ${cx},${cy} L ${x1.toFixed(2)},${y1.toFixed(2)} A ${R},${R} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z`;
       }
 
-      slices += `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}" stroke="${effectiveTheme.bg}" stroke-width="${isSelected ? 2.5 : 1}"/>`;
+      // Uniform stroke-width — selection shown via fill-opacity only
+      slices += `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}" stroke="${effectiveTheme.bg}" stroke-width="1"/>`;
+
+      // Value labels — inside for large slices, leader line for small ones
+      if (showValues) {
+        const pct    = Math.round(val / total * 100);
+        const pctStr = pct + '%';
+        const isSmall = sliceAngle / (2 * Math.PI) < 0.08;
+
+        if (isSmall) {
+          // Leader line starting just past the outer ring edge (R+8), with a short horizontal tick
+          const lineStart = R + 10;
+          const lineEnd   = R + 26;
+          const lx1 = cx + lineStart * Math.cos(midAngle);
+          const ly1 = cy + lineStart * Math.sin(midAngle);
+          const lx2 = cx + lineEnd   * Math.cos(midAngle);
+          const ly2 = cy + lineEnd   * Math.sin(midAngle);
+          const dir = Math.cos(midAngle) >= 0 ? 1 : -1;
+          const lx3 = lx2 + dir * 7;
+          const anchor = dir > 0 ? 'start' : 'end';
+          valueLabels +=
+            `<line x1="${lx1.toFixed(1)}" y1="${ly1.toFixed(1)}" x2="${lx2.toFixed(1)}" y2="${ly2.toFixed(1)}" stroke="${textColor}" stroke-width="1" stroke-opacity="0.4" stroke-linecap="round"/>` +
+            `<line x1="${lx2.toFixed(1)}" y1="${ly2.toFixed(1)}" x2="${lx3.toFixed(1)}" y2="${ly2.toFixed(1)}" stroke="${textColor}" stroke-width="1" stroke-opacity="0.4" stroke-linecap="round"/>` +
+            `<text x="${(lx3 + dir * 3).toFixed(1)}" y="${(ly2 + 4).toFixed(1)}" font-size="10" font-weight="600" font-family="${font}" fill="${textColor}" fill-opacity="0.65" text-anchor="${anchor}">${escSVG(pctStr)}</text>`;
+        } else {
+          // Centred inside the slice
+          const depth = variant === 'donut' ? (R + innerR) / 2 : R * 0.62;
+          const lx = cx + depth * Math.cos(midAngle);
+          const ly = cy + depth * Math.sin(midAngle);
+          const labelColor = isColorDark(fill) ? '#fff' : '#1C1A17';
+          valueLabels += `<text x="${lx.toFixed(1)}" y="${(ly + 4).toFixed(1)}" font-size="11" font-weight="600" font-family="${font}" fill="${labelColor}" text-anchor="middle">${escSVG(pctStr)}</text>`;
+        }
+      }
+
       startAngle = endAngle;
     });
 
     // Outer ring: a bg-coloured band around the circumference that covers the
     // harsh junction points where radial separator lines meet the outer arc.
-    // stroke-width 16 → extends 8px inward, masking the slice edge junctions.
     const outerRing = `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${R}" fill="none" stroke="${effectiveTheme.bg}" stroke-width="16"/>`;
 
-    // Legend — centered rows below pct labels
+    // Legend — centered rows below pie
     if (showLegend) {
       for (let row = 0; row < legendRows; row++) {
         const start = row * legendItemsPerRow;
         const end   = Math.min(start + legendItemsPerRow, data.length);
         const rowW  = legendItemWidths.slice(start, end).reduce((s, w) => s + w, 0) + (end - start - 1) * legendItemGap;
         let lx = (W - rowW) / 2;
-        const ly = chartAreaH + pctH + 8 + row * 20;
+        const ly = chartAreaH + 8 + row * 20;
         for (let i = start; i < end; i++) {
           const fill = options?.barColors?.[i] || palette[i % palette.length];
           legendItems += `<rect x="${lx.toFixed(1)}" y="${(ly + 2).toFixed(1)}" width="10" height="10" rx="2" fill="${fill}"/>`;
           legendItems += `<text x="${(lx + 14).toFixed(1)}" y="${(ly + 11).toFixed(1)}" font-size="11" font-family="${font}" fill="${textColor}">${escSVG(data[i].label)}</text>`;
           lx += legendItemWidths[i] + legendItemGap;
-        }
-      }
-    }
-
-    // Percentage labels — centered rows below the pie
-    if (showValues) {
-      for (let row = 0; row < pctRows; row++) {
-        const start = row * pctItemsPerRow;
-        const end   = Math.min(start + pctItemsPerRow, data.length);
-        const rowW  = pctWidths.slice(start, end).reduce((s, w) => s + w, 0) + (end - start - 1) * pctItemGap;
-        let x = (W - rowW) / 2;
-        const y = chartAreaH + 10 + row * 18;
-        for (let i = start; i < end; i++) {
-          const fill = options?.barColors?.[i] || palette[i % palette.length];
-          valueLabels += `<circle cx="${(x + 4).toFixed(1)}" cy="${(y - 3.5).toFixed(1)}" r="4" fill="${fill}"/>`;
-          valueLabels += `<text x="${(x + 14).toFixed(1)}" y="${y}" font-size="11" font-weight="600" font-family="${font}" fill="${textColor}">${escSVG(pctStrings[i])}</text>`;
-          x += pctWidths[i] + pctItemGap;
         }
       }
     }
@@ -1288,11 +1295,11 @@
   // Data section — schema-driven rows with colour swatch + drag handle
   function populateDataDisplay() {
     const el = document.getElementById('builder-data-display');
-    const defaultColor = bState.theme.palette[0];
+    const palette = bState.theme.palette || PRESETS.default.palette;
     const gripperSVG = `<svg class="drag-handle" viewBox="0 0 10 16" width="10" height="16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.2"/><circle cx="7" cy="3" r="1.2"/><circle cx="3" cy="8" r="1.2"/><circle cx="7" cy="8" r="1.2"/><circle cx="3" cy="13" r="1.2"/><circle cx="7" cy="13" r="1.2"/></svg>`;
 
     el.innerHTML = bState.data.map((row, i) => {
-      const color    = bState.options.barColors[i] || defaultColor;
+      const color    = bState.options.barColors[i] || palette[i % palette.length];
       const sel      = bState.options.selectedBar === i ? ' is-selected' : '';
       const hasCustom= bState.options.barColors[i] != null && bState.options.barColors[i] !== '';
       const inputs   = _schemaCols.map(col => {
@@ -1329,7 +1336,7 @@
         const palette = bState.theme.palette;
         const popup = document.createElement('div');
         popup.className = 'color-preset-popup';
-        const currentColor = bState.options.barColors[i] || defaultColor;
+        const currentColor = bState.options.barColors[i] || palette[i % palette.length];
         popup.innerHTML =
           `<div class="color-preset-dots">${palette.map(c => `<button class="color-preset-dot" data-color="${c}" style="background:${c};" title="${c}"></button>`).join('')}</div>` +
           `<label class="color-preset-custom">Custom…<input type="color" class="color-preset-native" value="${currentColor}"></label>`;
