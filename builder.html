@@ -855,7 +855,7 @@
         d_attr = `M ${cx},${cy} L ${x1.toFixed(2)},${y1.toFixed(2)} A ${R},${R} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z`;
       }
 
-      sliceFills += `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}"/>`;
+      sliceFills += `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}" stroke="${effectiveTheme.bg}" stroke-width="1"/>`;
       sliceBounds.push(startAngle);
       startAngle = endAngle;
     });

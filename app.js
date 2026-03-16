@@ -1930,9 +1930,10 @@ function renderPieChartSVG(theme) {
     return result;
   });
 
-  // Fills with no stroke, then separators drawn short of outer+inner edges —
-  // leaves an uncut rim that softens the harsh point where dividers meet the circle.
-  const sliceFills = slices.map(s => `<path d="${s.path}" fill="${s.color}"/>`).join('');
+  // Fills with thin bg stroke (prevents anti-aliasing seams), then shortened
+  // separators on top — the shortened lines stop before the outer edge, leaving
+  // an uncut rim that softens the harsh point where dividers meet the circle.
+  const sliceFills = slices.map(s => `<path d="${s.path}" fill="${s.color}" stroke="${theme.bg}" stroke-width="1"/>`).join('');
   const sepGapOuter = 9, sepGapInner = 5;
   const sliceSeps = slices.map(s => {
     const x0 = (cx + sepGapInner * Math.cos(s.sa)).toFixed(1);
