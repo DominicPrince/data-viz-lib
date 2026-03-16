@@ -830,6 +830,7 @@
     let valueLabels = '', legendItems = '';
     let startAngle = -Math.PI / 2;
     let slices = '';
+    const outsideLabels = []; // collected for deconfliction
 
     data.forEach((d, i) => {
       const val        = Math.max(+d.value || 0, 0);
@@ -852,30 +853,25 @@
         d_attr = `M ${cx},${cy} L ${x1.toFixed(2)},${y1.toFixed(2)} A ${R},${R} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z`;
       }
 
-      // Uniform stroke-width — selection shown via fill-opacity only
       slices += `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}" stroke="${effectiveTheme.bg}" stroke-width="1"/>`;
 
-      // Value labels — inside for large slices, leader line for small ones
       if (showValues) {
-        const pct    = Math.round(val / total * 100);
-        const pctStr = pct + '%';
+        const pct     = Math.round(val / total * 100);
+        const pctStr  = pct + '%';
         const isSmall = sliceAngle / (2 * Math.PI) < 0.08;
 
         if (isSmall) {
-          // Leader line starting just past the outer ring edge (R+8), with a short horizontal tick
-          const lineStart = R + 10;
-          const lineEnd   = R + 26;
-          const lx1 = cx + lineStart * Math.cos(midAngle);
-          const ly1 = cy + lineStart * Math.sin(midAngle);
-          const lx2 = cx + lineEnd   * Math.cos(midAngle);
-          const ly2 = cy + lineEnd   * Math.sin(midAngle);
-          const dir = Math.cos(midAngle) >= 0 ? 1 : -1;
-          const lx3 = lx2 + dir * 7;
-          const anchor = dir > 0 ? 'start' : 'end';
-          valueLabels +=
-            `<line x1="${lx1.toFixed(1)}" y1="${ly1.toFixed(1)}" x2="${lx2.toFixed(1)}" y2="${ly2.toFixed(1)}" stroke="${textColor}" stroke-width="1" stroke-opacity="0.4" stroke-linecap="round"/>` +
-            `<line x1="${lx2.toFixed(1)}" y1="${ly2.toFixed(1)}" x2="${lx3.toFixed(1)}" y2="${ly2.toFixed(1)}" stroke="${textColor}" stroke-width="1" stroke-opacity="0.4" stroke-linecap="round"/>` +
-            `<text x="${(lx3 + dir * 3).toFixed(1)}" y="${(ly2 + 4).toFixed(1)}" font-size="10" font-weight="600" font-family="${font}" fill="${textColor}" fill-opacity="0.65" text-anchor="${anchor}">${escSVG(pctStr)}</text>`;
+          // Collect for deconfliction below
+          const elbowR = R + 26;
+          const dir    = Math.cos(midAngle) >= 0 ? 1 : -1;
+          outsideLabels.push({
+            midAngle,
+            elbowX: cx + elbowR * Math.cos(midAngle),
+            naturalY: cy + elbowR * Math.sin(midAngle),
+            adjustedY: cy + elbowR * Math.sin(midAngle),
+            dir,
+            pctStr,
+          });
         } else {
           // Centred inside the slice
           const depth = variant === 'donut' ? (R + innerR) / 2 : R * 0.62;
@@ -887,6 +883,50 @@
       }
 
       startAngle = endAngle;
+    });
+
+    // Deconflict outside labels — push overlapping labels apart, per side
+    const minGap = 13;
+    [1, -1].forEach(side => {
+      const group = outsideLabels.filter(l => l.dir === side).sort((a, b) => a.naturalY - b.naturalY);
+      let changed = true;
+      for (let pass = 0; pass < 30 && changed; pass++) {
+        changed = false;
+        for (let j = 1; j < group.length; j++) {
+          if (group[j].adjustedY - group[j - 1].adjustedY < minGap) {
+            const mid = (group[j].adjustedY + group[j - 1].adjustedY) / 2;
+            group[j - 1].adjustedY = mid - minGap / 2;
+            group[j].adjustedY     = mid + minGap / 2;
+            changed = true;
+          }
+        }
+        for (let j = group.length - 2; j >= 0; j--) {
+          if (group[j + 1].adjustedY - group[j].adjustedY < minGap) {
+            const mid = (group[j + 1].adjustedY + group[j].adjustedY) / 2;
+            group[j].adjustedY     = mid - minGap / 2;
+            group[j + 1].adjustedY = mid + minGap / 2;
+            changed = true;
+          }
+        }
+      }
+    });
+
+    // Render outside labels with elbow leader lines to adjusted positions
+    outsideLabels.forEach(({ midAngle, elbowX, naturalY, adjustedY, dir, pctStr }) => {
+      const startX  = cx + (R + 10) * Math.cos(midAngle);
+      const startY  = cy + (R + 10) * Math.sin(midAngle);
+      const tickEndX = elbowX + dir * 8;
+      const anchor   = dir > 0 ? 'start' : 'end';
+      const stroke   = `stroke="${textColor}" stroke-width="1" stroke-opacity="0.4" stroke-linecap="round"`;
+      // If the label was pushed away from its natural y, add an elbow segment
+      const elbowSeg = Math.abs(adjustedY - naturalY) > 1
+        ? `<line x1="${elbowX.toFixed(1)}" y1="${naturalY.toFixed(1)}" x2="${elbowX.toFixed(1)}" y2="${adjustedY.toFixed(1)}" ${stroke}/>`
+        : '';
+      valueLabels +=
+        `<line x1="${startX.toFixed(1)}" y1="${startY.toFixed(1)}" x2="${elbowX.toFixed(1)}" y2="${naturalY.toFixed(1)}" ${stroke}/>` +
+        elbowSeg +
+        `<line x1="${elbowX.toFixed(1)}" y1="${adjustedY.toFixed(1)}" x2="${tickEndX.toFixed(1)}" y2="${adjustedY.toFixed(1)}" ${stroke}/>` +
+        `<text x="${(tickEndX + dir * 3).toFixed(1)}" y="${(adjustedY + 4).toFixed(1)}" font-size="10" font-weight="600" font-family="${font}" fill="${textColor}" fill-opacity="0.65" text-anchor="${anchor}">${escSVG(pctStr)}</text>`;
     });
 
     // Outer ring: a bg-coloured band around the circumference that covers the
