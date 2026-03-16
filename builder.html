@@ -885,15 +885,13 @@
       startAngle = endAngle;
     });
 
-    // Deconflict outside labels — push overlapping labels apart, per side,
-    // then clamp the whole group within the pie area so nothing clips.
-    const yMin = 6, yMax = chartAreaH - 6;
+    // Deconflict outside labels — push overlapping labels apart per side, 13px minimum gap.
+    // No clamping: labels are allowed to overflow. We'll measure the overflow after and
+    // add it as top/bottom padding to the SVG so nothing clips and the pie isn't intruded.
+    const minGap = 13;
     [1, -1].forEach(side => {
       const group = outsideLabels.filter(l => l.dir === side).sort((a, b) => a.naturalY - b.naturalY);
       if (group.length < 2) return;
-      // Shrink gap if there isn't enough room for all labels at 13px apart
-      const available = yMax - yMin;
-      const minGap = Math.min(13, available / (group.length - 1));
       let changed = true;
       for (let pass = 0; pass < 30 && changed; pass++) {
         changed = false;
@@ -914,27 +912,23 @@
           }
         }
       }
-      // Shift the whole group to keep it within bounds
-      const top    = group[0].adjustedY;
-      const bottom = group[group.length - 1].adjustedY;
-      if (top < yMin) {
-        const shift = yMin - top;
-        group.forEach(l => l.adjustedY += shift);
-      }
-      if (group[group.length - 1].adjustedY > yMax) {
-        const shift = group[group.length - 1].adjustedY - yMax;
-        group.forEach(l => l.adjustedY -= shift);
-      }
     });
 
-    // Render outside labels with elbow leader lines to adjusted positions
+    // Measure overflow: if any label sits above y=8 or below pieAreaH-8, grow the SVG
+    // rather than pushing labels into the pie.
+    const allAdjY = outsideLabels.map(l => l.adjustedY);
+    const topPad = allAdjY.length ? Math.max(0, 8 - Math.min(...allAdjY)) : 0;
+    const botPad = allAdjY.length ? Math.max(0, Math.max(...allAdjY) - (pieAreaH - 8)) : 0;
+    // Recompute total H to fit the extra padding
+    const H_final = pieAreaH + topPad + botPad + legendH + 16;
+
+    // Render outside labels (positions are relative to the pie; topPad is applied via SVG translate)
     outsideLabels.forEach(({ midAngle, elbowX, naturalY, adjustedY, dir, pctStr }) => {
-      const startX  = cx + (R + 10) * Math.cos(midAngle);
-      const startY  = cy + (R + 10) * Math.sin(midAngle);
+      const startX   = cx + (R + 10) * Math.cos(midAngle);
+      const startY   = cy + (R + 10) * Math.sin(midAngle);
       const tickEndX = elbowX + dir * 8;
       const anchor   = dir > 0 ? 'start' : 'end';
       const stroke   = `stroke="${textColor}" stroke-width="1" stroke-opacity="0.4" stroke-linecap="round"`;
-      // If the label was pushed away from its natural y, add an elbow segment
       const elbowSeg = Math.abs(adjustedY - naturalY) > 1
         ? `<line x1="${elbowX.toFixed(1)}" y1="${naturalY.toFixed(1)}" x2="${elbowX.toFixed(1)}" y2="${adjustedY.toFixed(1)}" ${stroke}/>`
         : '';
@@ -949,14 +943,14 @@
     // harsh junction points where radial separator lines meet the outer arc.
     const outerRing = `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${R}" fill="none" stroke="${effectiveTheme.bg}" stroke-width="16"/>`;
 
-    // Legend — centered rows below pie
+    // Legend — sits below the pie area (after topPad shift)
     if (showLegend) {
       for (let row = 0; row < legendRows; row++) {
         const start = row * legendItemsPerRow;
         const end   = Math.min(start + legendItemsPerRow, data.length);
         const rowW  = legendItemWidths.slice(start, end).reduce((s, w) => s + w, 0) + (end - start - 1) * legendItemGap;
         let lx = (W - rowW) / 2;
-        const ly = chartAreaH + 8 + row * 20;
+        const ly = pieAreaH + topPad + 8 + row * 20;
         for (let i = start; i < end; i++) {
           const fill = options?.barColors?.[i] || palette[i % palette.length];
           legendItems += `<rect x="${lx.toFixed(1)}" y="${(ly + 2).toFixed(1)}" width="10" height="10" rx="2" fill="${fill}"/>`;
@@ -966,7 +960,9 @@
       }
     }
 
-    return { content: (filterDef ? `<defs>${filterDef}</defs>` : '') + `<g${glowAttr}>${slices}</g>${outerRing}${valueLabels}${legendItems}`, h: H };
+    // Wrap pie content in a translate so topPad pushes the pie down, giving labels room above
+    const pieGroup = `<g transform="translate(0,${topPad})">${(filterDef ? `<defs>${filterDef}</defs>` : '')}<g${glowAttr}>${slices}</g>${outerRing}${valueLabels}</g>`;
+    return { content: pieGroup + legendItems, h: H_final };
   }
 
   /* Scatter plot — data rows: { x, y, label? } */
