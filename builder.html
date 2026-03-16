@@ -864,9 +864,15 @@
           // Collect for deconfliction below
           const elbowR = R + 26;
           const dir    = Math.cos(midAngle) >= 0 ? 1 : -1;
+          // Clamp elbowX so near-top/bottom slices (cos≈0) still get a
+          // visible horizontal shelf rather than collapsing to the pie centre.
+          const rawElbowX = cx + elbowR * Math.cos(midAngle);
+          const elbowX    = dir > 0
+            ? Math.max(rawElbowX, cx + 18)
+            : Math.min(rawElbowX, cx - 18);
           outsideLabels.push({
             midAngle,
-            elbowX: cx + elbowR * Math.cos(midAngle),
+            elbowX,
             naturalY: cy + elbowR * Math.sin(midAngle),
             adjustedY: cy + elbowR * Math.sin(midAngle),
             dir,
