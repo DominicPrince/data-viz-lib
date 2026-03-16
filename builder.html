@@ -885,10 +885,15 @@
       startAngle = endAngle;
     });
 
-    // Deconflict outside labels — push overlapping labels apart, per side
-    const minGap = 13;
+    // Deconflict outside labels — push overlapping labels apart, per side,
+    // then clamp the whole group within the pie area so nothing clips.
+    const yMin = 6, yMax = chartAreaH - 6;
     [1, -1].forEach(side => {
       const group = outsideLabels.filter(l => l.dir === side).sort((a, b) => a.naturalY - b.naturalY);
+      if (group.length < 2) return;
+      // Shrink gap if there isn't enough room for all labels at 13px apart
+      const available = yMax - yMin;
+      const minGap = Math.min(13, available / (group.length - 1));
       let changed = true;
       for (let pass = 0; pass < 30 && changed; pass++) {
         changed = false;
@@ -908,6 +913,17 @@
             changed = true;
           }
         }
+      }
+      // Shift the whole group to keep it within bounds
+      const top    = group[0].adjustedY;
+      const bottom = group[group.length - 1].adjustedY;
+      if (top < yMin) {
+        const shift = yMin - top;
+        group.forEach(l => l.adjustedY += shift);
+      }
+      if (group[group.length - 1].adjustedY > yMax) {
+        const shift = group[group.length - 1].adjustedY - yMax;
+        group.forEach(l => l.adjustedY -= shift);
       }
     });
 
