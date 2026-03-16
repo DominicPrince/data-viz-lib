@@ -84,7 +84,7 @@ const CHART_STYLES = {
   classic:   { name:'Classic',   barRadius:0, lineSmooth:false, lineDots:true,  areaFill:'solid',    gridScale:3,   gridDash:'',    strokeW:1.5, fontOverride:'Georgia, serif',         glow:false, axisLabels:true  },
   neon:      { name:'Neon',      barRadius:1, lineSmooth:true,  lineDots:true,  areaFill:'gradient', gridScale:1,   gridDash:'3 3', strokeW:2,   fontOverride:'"Courier New", monospace', glow:true,  axisLabels:true  },
   editorial: { name:'Editorial', barRadius:0, lineSmooth:false, lineDots:false, areaFill:'solid',    gridScale:5,   gridDash:'',    strokeW:3,   fontOverride:null,                                           glow:false, axisLabels:true  },
-  journeys:  { name:'Journeys', barRadius:12, lineSmooth:true,  lineDots:true,  areaFill:'gradient', gridScale:0,   gridDash:'',    strokeW:2,   fontOverride:"'Graphik', 'Inter', sans-serif",               glow:true,  glowSD:1.5, axisLabels:true  },
+  journeys:  { name:'Journeys', barRadius:12, lineSmooth:true,  lineDots:true,  areaFill:'gradient', gridScale:0,   gridDash:'',    strokeW:2,   fontOverride:"'Graphik', 'Inter', sans-serif",               glow:false, axisLabels:true  },
 };
 
 /* ── Vega theme builder ──────────────────────────────────────────────────── */
@@ -1917,32 +1917,23 @@ function renderPieChartSVG(theme) {
 
   const slices = data.map((d, i) => {
     const angle = (d.v / total) * 2 * Math.PI;
-    const sa = startAngle;
     const endAngle = startAngle + angle;
-    const x1 = cx + r * Math.cos(sa), y1 = cy + r * Math.sin(sa);
-    const x2 = cx + r * Math.cos(endAngle), y2 = cy + r * Math.sin(endAngle);
+    const x1 = cx + r * Math.cos(startAngle), y1 = cy + r * Math.sin(startAngle);
+    const x2 = cx + r * Math.cos(endAngle),   y2 = cy + r * Math.sin(endAngle);
     const large = angle > Math.PI ? 1 : 0;
-    const midAngle = sa + angle / 2;
+    const midAngle = startAngle + angle / 2;
     const lx = cx + lr * Math.cos(midAngle), ly = cy + lr * Math.sin(midAngle);
     const path = `M${cx.toFixed(1)},${cy.toFixed(1)} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${large} 1 ${x2.toFixed(1)},${y2.toFixed(1)} Z`;
-    const result = { path, color: palette[i % palette.length], sa, lx, ly, pct: Math.round(d.v / total * 100) };
+    const result = { path, color: palette[i % palette.length], lx, ly, pct: Math.round(d.v / total * 100) };
     startAngle = endAngle;
     return result;
   });
 
-  // Fills with thin bg stroke (prevents anti-aliasing seams), then shortened
-  // separators on top — the shortened lines stop before the outer edge, leaving
-  // an uncut rim that softens the harsh point where dividers meet the circle.
-  const sliceFills = slices.map(s => `<path d="${s.path}" fill="${s.color}" stroke="${theme.bg}" stroke-width="1"/>`).join('');
-  const sepGapOuter = 9, sepGapInner = 5;
-  const sliceSeps = slices.map(s => {
-    const x0 = (cx + sepGapInner * Math.cos(s.sa)).toFixed(1);
-    const y0 = (cy + sepGapInner * Math.sin(s.sa)).toFixed(1);
-    const x1 = (cx + (r - sepGapOuter) * Math.cos(s.sa)).toFixed(1);
-    const y1 = (cy + (r - sepGapOuter) * Math.sin(s.sa)).toFixed(1);
-    return `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${theme.bg}" stroke-width="1.5" stroke-linecap="round"/>`;
-  }).join('');
-  const sliceSVG = sliceFills + sliceSeps;
+  const sliceSVG = slices.map(s => `<path d="${s.path}" fill="${s.color}" stroke="${theme.bg}" stroke-width="1"/>`).join('');
+  // Outer ring: bg-coloured band covering the junction points where separator
+  // lines meet the arc, giving a soft rounded outer edge. stroke-width 16 →
+  // extends 8px inward, masking the harsh slice edge junctions at the rim.
+  const outerRing = `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="none" stroke="${theme.bg}" stroke-width="16"/>`;
 
   const labelsSVG = axisLabels ? slices.filter(s => s.pct >= 12).map(s => {
     const anchor = s.lx < cx - 4 ? 'end' : s.lx > cx + 4 ? 'start' : 'middle';
@@ -1956,7 +1947,7 @@ function renderPieChartSVG(theme) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%">` +
     `<rect width="${W}" height="${H}" fill="${theme.bg}"/>` +
     (filterDef ? `<defs>${filterDef}</defs>` : '') +
-    `<g${glowAttr}>${sliceSVG}</g>${labelsSVG}</svg>`;
+    `<g${glowAttr}>${sliceSVG}</g>${outerRing}${labelsSVG}</svg>`;
 }
 
 function renderDonutChartSVG(theme) {
