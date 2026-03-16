@@ -1205,9 +1205,15 @@
   const saved = sessionStorage.getItem('builderState');
   // Also accept ?chart=bubble-chart URL param to start a fresh builder without modal flow
   const _urlChart = new URLSearchParams(window.location.search).get('chart');
-  if (!saved && !_urlChart) { window.location.href = 'index.html'; }
+  const _sessionParsed = saved ? JSON.parse(saved) : null;
+  const _initChartId   = _sessionParsed?.chartId || _urlChart;
+  if (!_initChartId) { window.location.href = 'index.html'; }
 
-  const loaded = saved ? JSON.parse(saved) : { chartId: _urlChart, data: [], theme: PRESETS.journeys, chartStyle: 'journeys' };
+  // Prefer localStorage so progress survives a refresh; sessionStorage is the
+  // initial payload written by the catalog page and is always overwritten first.
+  const _localSaved  = localStorage.getItem('builderState_' + _initChartId);
+  const loaded = _localSaved ? JSON.parse(_localSaved)
+               : _sessionParsed || { chartId: _initChartId, data: [], theme: PRESETS.journeys, chartStyle: 'journeys' };
 
   const chartId = loaded.chartId || 'bar-chart';
   const schema  = (typeof CHART_SCHEMAS !== 'undefined' && CHART_SCHEMAS[chartId]) || null;
@@ -1216,7 +1222,12 @@
     data:       loaded.data       || [],
     theme:      loaded.theme      || PRESETS.journeys,
     chartStyle: loaded.chartStyle || 'journeys',
-    options: { title: '', subtitle: '', source: '', logoDataUrl: null, xLabel: '', yLabel: '', fontColor: '', bgColor: '', logoSize: 12, barColors: [], selectedBar: -1, yMin: '', yMax: '', xMin: '', xMax: '', showValues: true, showLegend: true },
+    options: {
+      title: '', subtitle: '', source: '', logoDataUrl: null, xLabel: '', yLabel: '',
+      fontColor: '', bgColor: '', logoSize: 12, barColors: [], selectedBar: -1,
+      yMin: '', yMax: '', xMin: '', xMax: '', showValues: true, showLegend: true,
+      ...(loaded.options || {}), selectedBar: -1,
+    },
   };
 
   // Normalize legacy bar-chart data format { l, v } → { label, value }
@@ -1274,6 +1285,19 @@
   let _editActive = false; // suppresses rerender while an inline edit is open
   let _dmBusy = false;    // suppresses dmSyncManual during modal setup
 
+  function saveState() {
+    const snapshot = { chartId, data: bState.data, theme: bState.theme, chartStyle: bState.chartStyle, options: { ...bState.options, selectedBar: -1 } };
+    try {
+      localStorage.setItem('builderState_' + chartId, JSON.stringify(snapshot));
+    } catch (e) {
+      // Quota exceeded — retry without the (potentially large) logo data URL
+      try {
+        snapshot.options = { ...snapshot.options, logoDataUrl: null };
+        localStorage.setItem('builderState_' + chartId, JSON.stringify(snapshot));
+      } catch (e2) { /* storage full, skip */ }
+    }
+  }
+
   function rerender() {
     if (_editActive) return;
     let inner;
@@ -1302,6 +1326,7 @@
     }
     if (inner !== undefined) currentSVG = composeSVG(inner, bState);
     document.getElementById('builder-preview').innerHTML = currentSVG;
+    saveState();
   }
 
   function selectBar(i, openPicker) {
@@ -1841,6 +1866,18 @@
       lineColorAuto.classList.add('is-auto');
       rerender();
     });
+  }
+
+  // Restore UI controls from saved options (runs once after all controls are wired up)
+  {
+    const o = bState.options;
+    if (o.title)    { const e = document.getElementById('b-title');    if (e) { e.value = o.title;    taAutoH(e); } }
+    if (o.subtitle) { const e = document.getElementById('b-subtitle'); if (e) { e.value = o.subtitle; taAutoH(e); } }
+    if (o.source)   { const e = document.getElementById('b-source');   if (e) { e.value = o.source;   taAutoH(e); } }
+    if (o.xLabel)   { const e = document.getElementById('b-xlabel');   if (e) e.value = o.xLabel; }
+    if (o.yLabel)   { const e = document.getElementById('b-ylabel');   if (e) e.value = o.yLabel; }
+    if (o.bgColor)   { bgColorInput.value = o.bgColor;   bgColorHex.textContent = o.bgColor;   bgColorAuto.classList.remove('is-auto'); }
+    if (o.fontColor) { fontColorInput.value = o.fontColor; fontColorHex.textContent = o.fontColor; fontColorAuto.classList.remove('is-auto'); }
   }
 
   /* ─────────────────────────────────────────────────────────

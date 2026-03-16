@@ -3653,12 +3653,16 @@ function initBuildTab() {
   // Build Chart → navigate to builder
   document.getElementById('build-chart-btn').addEventListener('click', () => {
     if (!currentBuildData.length) return;
-    sessionStorage.setItem('builderState', JSON.stringify({
+    const payload = JSON.stringify({
       chartId: state.openVizId,
       data: currentBuildData,
       theme: state.theme,
       chartStyle: state.chartStyle,
-    }));
+    });
+    // Write to both storages: sessionStorage for compatibility,
+    // localStorage to seed the builder's refresh-persist store (fresh session overwrites old)
+    sessionStorage.setItem('builderState', payload);
+    localStorage.setItem('builderState_' + state.openVizId, payload);
     window.location.href = 'builder.html';
   });
 }
