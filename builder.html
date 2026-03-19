@@ -1389,13 +1389,15 @@
       const color    = bState.options.barColors[i] || palette[i % palette.length];
       const sel      = bState.options.selectedBar === i ? ' is-selected' : '';
       const hasCustom= bState.options.barColors[i] != null && bState.options.barColors[i] !== '';
+      const _isPie = ['pie-chart', 'donut-chart'].includes(chartId);
       const inputs   = _schemaCols.map(col => {
         const val  = row[col.key] ?? '';
         const type = col.type === 'number' ? 'number' : 'text';
         const cls  = col.type === 'number' ? 'data-value-input' : 'data-label-input';
+        const minAttr = (type === 'number' && _isPie) ? ' min="0"' : '';
         return `<input type="${type}" class="${cls}" id="data-${col.key}-${i}" ` +
                `data-col="${col.key}" data-row="${i}" value="${escAttr(String(val))}" ` +
-               `placeholder="${col.label}" step="any">`;
+               `placeholder="${col.label}" step="any"${minAttr}>`;
       }).join('');
       const isLineVariant = ['line-chart', 'area-chart', 'step-chart'].includes(chartId);
       const swatchEl = isLineVariant ? '' :
@@ -1976,7 +1978,8 @@
       const val = rowData?.[col.key] ?? '';
       const type = col.type === 'number' ? 'number' : 'text';
       const displayVal = val !== '' ? escAttr(String(val)) : '';
-      return `<td><input class="manual-cell" type="${type}" placeholder="${escAttr(col.label)}" value="${displayVal}" step="any"></td>`;
+      const minAttr = (type === 'number' && ['pie-chart', 'donut-chart'].includes(chartId)) ? ' min="0"' : '';
+      return `<td><input class="manual-cell" type="${type}" placeholder="${escAttr(col.label)}" value="${displayVal}" step="any"${minAttr}></td>`;
     }).join('');
     tr.innerHTML = cells + `<td><button class="manual-del-btn" title="Remove">×</button></td>`;
     tr.querySelector('.manual-del-btn').addEventListener('click', () => { tr.remove(); dmSyncManual(); });
