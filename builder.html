@@ -852,16 +852,30 @@
       const x1 = cx + R * Math.cos(startAngle), y1 = cy + R * Math.sin(startAngle);
       const x2 = cx + R * Math.cos(endAngle),   y2 = cy + R * Math.sin(endAngle);
 
-      let d_attr;
-      if (variant === 'donut') {
-        const ix1 = cx + innerR * Math.cos(startAngle), iy1 = cy + innerR * Math.sin(startAngle);
-        const ix2 = cx + innerR * Math.cos(endAngle),   iy2 = cy + innerR * Math.sin(endAngle);
-        d_attr = `M ${x1.toFixed(2)},${y1.toFixed(2)} A ${R},${R} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} L ${ix2.toFixed(2)},${iy2.toFixed(2)} A ${innerR},${innerR} 0 ${largeArc},0 ${ix1.toFixed(2)},${iy1.toFixed(2)} Z`;
+      // SVG arcs with coincident start/end points are silently dropped — a full-circle
+      // slice (100%) must be drawn as a <circle> instead.
+      const isFullCircle = sliceAngle >= 2 * Math.PI - 0.0001;
+      let sliceEl;
+      if (isFullCircle) {
+        if (variant === 'donut') {
+          // Two concentric circles: filled outer, bg-coloured inner hole
+          sliceEl = `<circle data-bar-idx="${i}" cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${R}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}"/>` +
+                    `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${innerR}" fill="${effectiveTheme.bg}"/>`;
+        } else {
+          sliceEl = `<circle data-bar-idx="${i}" cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${R}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}"/>`;
+        }
       } else {
-        d_attr = `M ${cx},${cy} L ${x1.toFixed(2)},${y1.toFixed(2)} A ${R},${R} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z`;
+        let d_attr;
+        if (variant === 'donut') {
+          const ix1 = cx + innerR * Math.cos(startAngle), iy1 = cy + innerR * Math.sin(startAngle);
+          const ix2 = cx + innerR * Math.cos(endAngle),   iy2 = cy + innerR * Math.sin(endAngle);
+          d_attr = `M ${x1.toFixed(2)},${y1.toFixed(2)} A ${R},${R} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} L ${ix2.toFixed(2)},${iy2.toFixed(2)} A ${innerR},${innerR} 0 ${largeArc},0 ${ix1.toFixed(2)},${iy1.toFixed(2)} Z`;
+        } else {
+          d_attr = `M ${cx},${cy} L ${x1.toFixed(2)},${y1.toFixed(2)} A ${R},${R} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z`;
+        }
+        sliceEl = `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}" stroke="${effectiveTheme.bg}" stroke-width="1"/>`;
       }
-
-      slices += `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}" stroke="${effectiveTheme.bg}" stroke-width="1"/>`;
+      slices += sliceEl;
 
       if (showValues) {
         const pct     = Math.round(val / total * 100);
