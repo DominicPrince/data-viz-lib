@@ -55,7 +55,33 @@
         </div>
       </div>
       <button class="hero-cta-btn" id="hero-cta-btn">Show me charts →</button>
-      <button class="hero-scroll-link" id="hero-scroll-link">or browse all 50+ charts ↓</button>
+    </div>
+
+    <div class="hero-tickers" id="hero-tickers" aria-hidden="true">
+      <div class="hero-ticker hero-ticker--fwd hero-ticker--bold">
+        <div class="hero-ticker-track">
+          Bar Chart &nbsp;·&nbsp; Line Chart &nbsp;·&nbsp; Scatter Plot &nbsp;·&nbsp; Bubble Chart &nbsp;·&nbsp; Heatmap &nbsp;·&nbsp; Pie Chart &nbsp;·&nbsp; Dot Plot &nbsp;·&nbsp; Lollipop &nbsp;·&nbsp; Area Chart &nbsp;·&nbsp; Treemap &nbsp;·&nbsp; Waterfall &nbsp;·&nbsp; Histogram &nbsp;·&nbsp; Funnel Chart &nbsp;·&nbsp; Slope Chart &nbsp;·&nbsp; Donut Chart &nbsp;·&nbsp; Streamgraph &nbsp;·&nbsp; Sankey &nbsp;·&nbsp; Chord Diagram &nbsp;·&nbsp; Network Graph &nbsp;·&nbsp; Gantt Chart &nbsp;·&nbsp;
+          Bar Chart &nbsp;·&nbsp; Line Chart &nbsp;·&nbsp; Scatter Plot &nbsp;·&nbsp; Bubble Chart &nbsp;·&nbsp; Heatmap &nbsp;·&nbsp; Pie Chart &nbsp;·&nbsp; Dot Plot &nbsp;·&nbsp; Lollipop &nbsp;·&nbsp; Area Chart &nbsp;·&nbsp; Treemap &nbsp;·&nbsp; Waterfall &nbsp;·&nbsp; Histogram &nbsp;·&nbsp; Funnel Chart &nbsp;·&nbsp; Slope Chart &nbsp;·&nbsp; Donut Chart &nbsp;·&nbsp; Streamgraph &nbsp;·&nbsp; Sankey &nbsp;·&nbsp; Chord Diagram &nbsp;·&nbsp; Network Graph &nbsp;·&nbsp; Gantt Chart &nbsp;·&nbsp;
+        </div>
+      </div>
+      <div class="hero-ticker hero-ticker--rev hero-ticker--outline">
+        <div class="hero-ticker-track">
+          Violin Plot &nbsp;·&nbsp; Box Plot &nbsp;·&nbsp; Bullet Chart &nbsp;·&nbsp; Radial Bar &nbsp;·&nbsp; Marimekko &nbsp;·&nbsp; Parallel Coords &nbsp;·&nbsp; Ridgeline &nbsp;·&nbsp; Dumbbell Chart &nbsp;·&nbsp; Stacked Bar &nbsp;·&nbsp; Grouped Bar &nbsp;·&nbsp; Step Chart &nbsp;·&nbsp; Bump Chart &nbsp;·&nbsp; Calendar Heatmap &nbsp;·&nbsp; Voronoi &nbsp;·&nbsp; Word Cloud &nbsp;·&nbsp; Waffle Chart &nbsp;·&nbsp; Pictogram &nbsp;·&nbsp; Timeline &nbsp;·&nbsp; Candlestick &nbsp;·&nbsp; Spark Line &nbsp;·&nbsp;
+          Violin Plot &nbsp;·&nbsp; Box Plot &nbsp;·&nbsp; Bullet Chart &nbsp;·&nbsp; Radial Bar &nbsp;·&nbsp; Marimekko &nbsp;·&nbsp; Parallel Coords &nbsp;·&nbsp; Ridgeline &nbsp;·&nbsp; Dumbbell Chart &nbsp;·&nbsp; Stacked Bar &nbsp;·&nbsp; Grouped Bar &nbsp;·&nbsp; Step Chart &nbsp;·&nbsp; Bump Chart &nbsp;·&nbsp; Calendar Heatmap &nbsp;·&nbsp; Voronoi &nbsp;·&nbsp; Word Cloud &nbsp;·&nbsp; Waffle Chart &nbsp;·&nbsp; Pictogram &nbsp;·&nbsp; Timeline &nbsp;·&nbsp; Candlestick &nbsp;·&nbsp; Spark Line &nbsp;·&nbsp;
+        </div>
+      </div>
+      <div class="hero-ticker hero-ticker--fwd hero-ticker--bold hero-ticker--slow">
+        <div class="hero-ticker-track">
+          Choropleth Map &nbsp;·&nbsp; Proportional Symbol &nbsp;·&nbsp; Density Plot &nbsp;·&nbsp; Contour Plot &nbsp;·&nbsp; Arc Diagram &nbsp;·&nbsp; Alluvial &nbsp;·&nbsp; Sunburst &nbsp;·&nbsp; Icicle Chart &nbsp;·&nbsp; Circle Packing &nbsp;·&nbsp; Force-Directed &nbsp;·&nbsp; Population Pyramid &nbsp;·&nbsp; Age-Sex Pyramid &nbsp;·&nbsp; Tornado Chart &nbsp;·&nbsp; Polar Chart &nbsp;·&nbsp; Spider Chart &nbsp;·&nbsp; Nightingale Rose &nbsp;·&nbsp;
+          Choropleth Map &nbsp;·&nbsp; Proportional Symbol &nbsp;·&nbsp; Density Plot &nbsp;·&nbsp; Contour Plot &nbsp;·&nbsp; Arc Diagram &nbsp;·&nbsp; Alluvial &nbsp;·&nbsp; Sunburst &nbsp;·&nbsp; Icicle Chart &nbsp;·&nbsp; Circle Packing &nbsp;·&nbsp; Force-Directed &nbsp;·&nbsp; Population Pyramid &nbsp;·&nbsp; Age-Sex Pyramid &nbsp;·&nbsp; Tornado Chart &nbsp;·&nbsp; Polar Chart &nbsp;·&nbsp; Spider Chart &nbsp;·&nbsp; Nightingale Rose &nbsp;·&nbsp;
+        </div>
+      </div>
+      <div class="hero-ticker hero-ticker--rev hero-ticker--outline hero-ticker--fast">
+        <div class="hero-ticker-track">
+          Bar Chart &nbsp;·&nbsp; Scatter Plot &nbsp;·&nbsp; Heatmap &nbsp;·&nbsp; Lollipop &nbsp;·&nbsp; Treemap &nbsp;·&nbsp; Histogram &nbsp;·&nbsp; Slope Chart &nbsp;·&nbsp; Streamgraph &nbsp;·&nbsp; Chord Diagram &nbsp;·&nbsp; Gantt Chart &nbsp;·&nbsp; Box Plot &nbsp;·&nbsp; Radial Bar &nbsp;·&nbsp; Dumbbell Chart &nbsp;·&nbsp; Stacked Bar &nbsp;·&nbsp; Calendar Heatmap &nbsp;·&nbsp; Word Cloud &nbsp;·&nbsp; Candlestick &nbsp;·&nbsp; Sunburst &nbsp;·&nbsp; Arc Diagram &nbsp;·&nbsp; Nightingale Rose &nbsp;·&nbsp;
+          Bar Chart &nbsp;·&nbsp; Scatter Plot &nbsp;·&nbsp; Heatmap &nbsp;·&nbsp; Lollipop &nbsp;·&nbsp; Treemap &nbsp;·&nbsp; Histogram &nbsp;·&nbsp; Slope Chart &nbsp;·&nbsp; Streamgraph &nbsp;·&nbsp; Chord Diagram &nbsp;·&nbsp; Gantt Chart &nbsp;·&nbsp; Box Plot &nbsp;·&nbsp; Radial Bar &nbsp;·&nbsp; Dumbbell Chart &nbsp;·&nbsp; Stacked Bar &nbsp;·&nbsp; Calendar Heatmap &nbsp;·&nbsp; Word Cloud &nbsp;·&nbsp; Candlestick &nbsp;·&nbsp; Sunburst &nbsp;·&nbsp; Arc Diagram &nbsp;·&nbsp; Nightingale Rose &nbsp;·&nbsp;
+        </div>
+      </div>
     </div>
   </section>
 
@@ -413,7 +439,7 @@
       document.getElementById('main').scrollIntoView({ behavior: 'smooth' });
     });
 
-    document.getElementById('hero-scroll-link').addEventListener('click', function() {
+    document.getElementById('hero-tickers').addEventListener('click', function() {
       document.getElementById('main').scrollIntoView({ behavior: 'smooth' });
     });
 
