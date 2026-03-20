@@ -1907,3 +1907,419 @@ body.sidebar-open .main {
 #builder-preview text[data-editable] { cursor: text; }
 #builder-preview text[data-editable]:hover { text-decoration: underline; text-decoration-color: rgba(59, 130, 246, 0.5); }
 #builder-preview image[data-editable]:hover { opacity: 0.75; }
+
+/* ── Auth UI (shared across pages) ─────────────────────── */
+
+.bldr-auth-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bldr-signin-btn,
+.lib-signin-btn,
+.hdr-signin-btn,
+.lib-hdr-signin-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  background: var(--color-text);
+  color: var(--color-bg);
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.bldr-signin-btn:hover,
+.lib-signin-btn:hover,
+.hdr-signin-btn:hover,
+.lib-hdr-signin-btn:hover { opacity: 0.8; }
+
+.bldr-my-charts-link,
+.hdr-my-charts-link {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.bldr-my-charts-link:hover,
+.hdr-my-charts-link:hover { color: var(--color-text); }
+
+.bldr-save-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  background: var(--color-text);
+  color: var(--color-bg);
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.bldr-save-btn:hover { opacity: 0.8; }
+
+.bldr-avatar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+}
+.bldr-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.bldr-avatar-initial {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* ── Save modal ─────────────────────────────────────────── */
+
+.bldr-save-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+}
+.bldr-save-dialog {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 24px;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+.bldr-save-dialog-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.bldr-save-name-input {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  box-sizing: border-box;
+  outline: none;
+  margin-bottom: 16px;
+}
+.bldr-save-name-input:focus { border-color: var(--color-text); }
+.bldr-save-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.bldr-save-cancel-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  background: transparent;
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.bldr-save-cancel-btn:hover { color: var(--color-text); border-color: var(--color-text); }
+.bldr-save-confirm-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  background: var(--color-text);
+  color: var(--color-bg);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.bldr-save-confirm-btn:hover { opacity: 0.8; }
+.bldr-save-confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Library page ───────────────────────────────────────── */
+
+.library-page {
+  background: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+}
+
+.lib-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 52px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.lib-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-muted);
+  text-decoration: none;
+}
+.lib-back:hover { color: var(--color-text); }
+
+.lib-header-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.lib-auth-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lib-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+/* State panels */
+.lib-state-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 80px 24px;
+  gap: 12px;
+}
+.lib-state-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--color-border);
+  margin-bottom: 8px;
+}
+.lib-state-heading {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+.lib-state-sub {
+  font-size: 14px;
+  color: var(--color-muted);
+  margin: 0;
+}
+.lib-loading-text {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+.lib-browse-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  text-decoration: none;
+  margin-top: 8px;
+}
+.lib-browse-link:hover { text-decoration: underline; }
+
+/* Sign in button on the state panel */
+.lib-signin-btn {
+  margin-top: 8px;
+  padding: 10px 24px;
+  font-size: 14px;
+}
+
+/* Chart grid */
+.lib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.lib-card {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--color-bg);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.lib-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+}
+.lib-card.is-loading { opacity: 0.6; pointer-events: none; }
+
+.lib-card-thumb {
+  height: 140px;
+  background: var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.lib-card-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.lib-card-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--color-border);
+}
+
+.lib-card-body {
+  padding: 12px 14px;
+}
+.lib-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lib-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lib-card-type-pill {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-muted);
+  background: var(--color-border);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.lib-card-date {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+.lib-card-delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.35);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.lib-card:hover .lib-card-delete-btn { opacity: 1; }
+.lib-card-delete-btn:hover { background: rgba(0,0,0,0.6); }
+
+/* Delete confirmation overlay */
+.lib-delete-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+}
+.lib-delete-dialog {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 24px;
+  width: 280px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  text-align: center;
+}
+.lib-delete-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.lib-delete-sub {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin: 0 0 20px;
+}
+.lib-delete-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.lib-delete-cancel {
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--color-text);
+}
+.lib-delete-confirm {
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.lib-delete-confirm:hover { opacity: 0.85; }
+
+/* ── index.html header auth area ─────────────────────────── */
+.site-header {
+  position: relative;
+}
+.header-auth {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

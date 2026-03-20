@@ -19,7 +19,7 @@
       Library
     </a>
     <span class="builder-header-title" id="builder-title">Chart Builder</span>
-    <span></span>
+    <div class="bldr-auth-area" id="bldr-auth-area"></div>
   </header>
 
   <div class="builder-layout">
@@ -226,6 +226,23 @@
 
       <div class="data-modal-footer">
         <button class="build-cta-btn" id="dm-done-btn">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+
+  <!-- Save chart modal -->
+  <div class="bldr-save-overlay" id="bldr-save-modal" hidden>
+    <div class="bldr-save-dialog">
+      <div class="bldr-save-dialog-title">Save chart</div>
+      <input type="text" id="bldr-save-name" class="bldr-save-name-input" placeholder="Chart name…" maxlength="80">
+      <div class="bldr-save-actions">
+        <button class="bldr-save-cancel-btn" id="bldr-save-cancel-btn">Cancel</button>
+        <button class="bldr-save-confirm-btn" id="bldr-save-confirm-btn">Save</button>
       </div>
     </div>
   </div>
@@ -1318,6 +1335,8 @@
   const chartId = loaded.chartId || 'bar-chart';
   const schema  = (typeof CHART_SCHEMAS !== 'undefined' && CHART_SCHEMAS[chartId]) || null;
 
+  let _savedDocId = loaded.savedDocId || null;
+
   const bState = {
     data:       loaded.data       || [],
     theme:      loaded.theme      || PRESETS.journeys,
@@ -1386,7 +1405,7 @@
   let _dmBusy = false;    // suppresses dmSyncManual during modal setup
 
   function saveState() {
-    const snapshot = { chartId, data: bState.data, theme: bState.theme, chartStyle: bState.chartStyle, options: { ...bState.options, selectedBar: -1 } };
+    const snapshot = { chartId, savedDocId: _savedDocId || null, data: bState.data, theme: bState.theme, chartStyle: bState.chartStyle, options: { ...bState.options, selectedBar: -1 } };
     try {
       localStorage.setItem('builderState_' + chartId, JSON.stringify(snapshot));
     } catch (e) {
@@ -2239,6 +2258,82 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !document.getElementById('data-edit-modal').hidden) closeDataModal();
   });
+
+  /* ── Firebase auth + chart save ─────────────────────────── */
+
+  function updateBuilderAuthUI(user) {
+    const area = document.getElementById('bldr-auth-area');
+    if (!user) {
+      area.innerHTML = `<button class="bldr-signin-btn" id="bldr-signin-btn">Sign in</button>`;
+      document.getElementById('bldr-signin-btn').onclick = () => fbSignIn().catch(() => {});
+    } else {
+      const avatar = user.photoURL
+        ? `<img src="${user.photoURL}" class="bldr-avatar" alt="" onerror="this.style.display='none'">`
+        : `<span class="bldr-avatar-initial">${(user.displayName || '?')[0]}</span>`;
+      area.innerHTML = `
+        <a href="library.html" class="bldr-my-charts-link">My Charts</a>
+        <button class="bldr-save-btn" id="bldr-save-btn">Save</button>
+        <button class="bldr-avatar-btn" id="bldr-avatar-btn" title="${(user.displayName || '') + '\nClick to sign out'}">${avatar}</button>
+      `;
+      document.getElementById('bldr-save-btn').onclick = openSavePrompt;
+      document.getElementById('bldr-avatar-btn').onclick = () => { if (confirm('Sign out of data-viz-lib?')) fbSignOut(); };
+    }
+  }
+
+  function openSavePrompt() {
+    const title = (bState.options.title || '').trim();
+    document.getElementById('bldr-save-name').value = title || 'Untitled chart';
+    document.getElementById('bldr-save-modal').hidden = false;
+    setTimeout(() => { try { document.getElementById('bldr-save-name').select(); } catch(e) {} }, 50);
+  }
+
+  async function doSaveChart() {
+    const name = (document.getElementById('bldr-save-name').value || '').trim() || 'Untitled chart';
+    const btn = document.getElementById('bldr-save-confirm-btn');
+    btn.textContent = 'Saving…';
+    btn.disabled = true;
+    try {
+      const savedOptions = { ...bState.options, selectedBar: -1, logoDataUrl: null };
+      const doc = {
+        chartType: chartId,
+        name,
+        svgSnapshot: currentSVG,
+        state: { data: bState.data, theme: bState.theme, chartStyle: bState.chartStyle, options: savedOptions },
+      };
+      if (_savedDocId) {
+        await fbUpdateChart(_savedDocId, doc);
+      } else {
+        const ref = await fbSaveChart(doc);
+        _savedDocId = ref.id;
+        saveState(); // persist the new docId to localStorage
+      }
+      document.getElementById('bldr-save-modal').hidden = false;
+      document.getElementById('bldr-save-modal').hidden = true;
+      showFeedback('Saved ✓');
+      const saveBtn = document.getElementById('bldr-save-btn');
+      if (saveBtn) { saveBtn.textContent = 'Saved ✓'; setTimeout(() => { if (saveBtn) saveBtn.textContent = 'Save'; }, 2000); }
+    } catch (e) {
+      console.error('Save error:', e);
+      showFeedback('Save failed — check you are signed in');
+    } finally {
+      btn.textContent = 'Save';
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('bldr-save-confirm-btn').addEventListener('click', doSaveChart);
+  document.getElementById('bldr-save-cancel-btn').addEventListener('click', () => {
+    document.getElementById('bldr-save-modal').hidden = true;
+  });
+  document.getElementById('bldr-save-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('bldr-save-modal')) document.getElementById('bldr-save-modal').hidden = true;
+  });
+  document.getElementById('bldr-save-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSaveChart();
+    if (e.key === 'Escape') document.getElementById('bldr-save-modal').hidden = true;
+  });
+
+  fbAuth.onAuthStateChanged(user => { updateBuilderAuthUI(user); });
 
   </script>
 </body>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Charts — data-viz-lib</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@600;700&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="library-page">
+
+  <header class="lib-header">
+    <a href="index.html" class="lib-back">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      data-viz-lib
+    </a>
+    <span class="lib-header-title">My Charts</span>
+    <div class="lib-auth-area" id="lib-auth-area"></div>
+  </header>
+
+  <main class="lib-main">
+
+    <!-- Signed out -->
+    <div class="lib-state-panel" id="lib-signed-out" hidden>
+      <svg class="lib-state-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="24" cy="18" r="8" stroke="currentColor" stroke-width="2"/>
+        <path d="M8 42c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <h2 class="lib-state-heading">Sign in to view your charts</h2>
+      <p class="lib-state-sub">Your saved charts will appear here.</p>
+      <button class="lib-signin-btn" id="lib-signin-btn">Sign in with Google</button>
+    </div>
+
+    <!-- Loading -->
+    <div class="lib-state-panel" id="lib-loading" hidden>
+      <p class="lib-loading-text">Loading…</p>
+    </div>
+
+    <!-- Empty -->
+    <div class="lib-state-panel" id="lib-empty" hidden>
+      <svg class="lib-state-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="6" y="10" width="36" height="28" rx="3" stroke="currentColor" stroke-width="2"/>
+        <path d="M14 30l6-8 5 6 4-5 5 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h2 class="lib-state-heading">No saved charts yet</h2>
+      <p class="lib-state-sub">Build a chart and click Save to keep it here.</p>
+      <a href="index.html" class="lib-browse-link">Browse chart types →</a>
+    </div>
+
+    <!-- Chart grid -->
+    <div class="lib-grid" id="lib-grid" hidden></div>
+
+  </main>
+
+  <!-- Delete confirmation overlay -->
+  <div class="lib-delete-overlay" id="lib-delete-overlay" hidden>
+    <div class="lib-delete-dialog">
+      <div class="lib-delete-title">Delete chart?</div>
+      <p class="lib-delete-sub">This can't be undone.</p>
+      <div class="lib-delete-actions">
+        <button class="lib-delete-cancel" id="lib-delete-cancel">Cancel</button>
+        <button class="lib-delete-confirm" id="lib-delete-confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script>
+    // Chart type display names
+    const CHART_NAMES = {
+      'bar-chart': 'Bar Chart', 'lollipop-chart': 'Lollipop Chart', 'dot-plot': 'Dot Plot',
+      'line-chart': 'Line Chart', 'area-chart': 'Area Chart', 'step-chart': 'Step Chart',
+      'pie-chart': 'Pie Chart', 'donut-chart': 'Donut Chart',
+      'scatter-plot': 'Scatter Plot', 'bubble-chart': 'Bubble Chart',
+    };
+
+    function fmtDate(ts) {
+      if (!ts) return '';
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      const now = new Date();
+      const diff = now - d;
+      if (diff < 86400000 && now.getDate() === d.getDate()) return 'Today';
+      if (diff < 172800000) return 'Yesterday';
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    }
+
+    function svgToB64(svgStr) {
+      try { return btoa(unescape(encodeURIComponent(svgStr))); } catch(e) { return ''; }
+    }
+
+    function updateLibAuthUI(user) {
+      const area = document.getElementById('lib-auth-area');
+      if (!user) {
+        area.innerHTML = `<button class="lib-hdr-signin-btn" id="lib-hdr-signin-btn">Sign in</button>`;
+        document.getElementById('lib-hdr-signin-btn').onclick = () => fbSignIn().catch(() => {});
+      } else {
+        const avatar = user.photoURL
+          ? `<img src="${user.photoURL}" class="bldr-avatar" alt="" onerror="this.style.display='none'">`
+          : `<span class="bldr-avatar-initial">${(user.displayName || '?')[0]}</span>`;
+        area.innerHTML = `<button class="bldr-avatar-btn" id="lib-avatar-btn" title="${(user.displayName || '') + '\nClick to sign out'}">${avatar}</button>`;
+        document.getElementById('lib-avatar-btn').onclick = () => { if (confirm('Sign out?')) fbSignOut(); };
+      }
+    }
+
+    function renderGrid(charts) {
+      const grid = document.getElementById('lib-grid');
+      grid.innerHTML = '';
+      charts.forEach(chart => {
+        const b64 = chart.svgSnapshot ? svgToB64(chart.svgSnapshot) : '';
+        const thumbHtml = b64
+          ? `<img class="lib-card-thumb-img" src="data:image/svg+xml;base64,${b64}" alt="chart preview">`
+          : `<div class="lib-card-thumb-placeholder"></div>`;
+        const typeName = CHART_NAMES[chart.chartType] || chart.chartType || 'Chart';
+        const dateStr  = fmtDate(chart.updatedAt);
+
+        const card = document.createElement('div');
+        card.className = 'lib-card';
+        card.dataset.id   = chart.id;
+        card.dataset.type = chart.chartType;
+        card.innerHTML = `
+          <div class="lib-card-thumb">${thumbHtml}</div>
+          <div class="lib-card-body">
+            <div class="lib-card-name">${chart.name || 'Untitled'}</div>
+            <div class="lib-card-meta">
+              <span class="lib-card-type-pill">${typeName}</span>
+              <span class="lib-card-date">${dateStr}</span>
+            </div>
+          </div>
+          <button class="lib-card-delete-btn" data-id="${chart.id}" title="Delete">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function openChart(chartId, docId, state) {
+      const stateToSave = { chartId, savedDocId: docId, ...state };
+      try {
+        localStorage.setItem('builderState_' + chartId, JSON.stringify(stateToSave));
+      } catch(e) {
+        // Quota — strip logo
+        stateToSave.options = { ...stateToSave.options, logoDataUrl: null };
+        try { localStorage.setItem('builderState_' + chartId, JSON.stringify(stateToSave)); } catch(e2) {}
+      }
+      window.location.href = 'builder.html?chart=' + chartId;
+    }
+
+    let _pendingDeleteId = null;
+
+    document.getElementById('lib-grid').addEventListener('click', async e => {
+      // Delete button
+      const delBtn = e.target.closest('.lib-card-delete-btn');
+      if (delBtn) {
+        _pendingDeleteId = delBtn.dataset.id;
+        document.getElementById('lib-delete-overlay').hidden = false;
+        return;
+      }
+      // Card click → open in builder
+      const card = e.target.closest('.lib-card');
+      if (!card) return;
+      card.classList.add('is-loading');
+      try {
+        const chart = await fbGetChart(card.dataset.id);
+        if (!chart) { card.classList.remove('is-loading'); return; }
+        openChart(chart.chartType, chart.id, chart.state);
+      } catch(err) {
+        console.error(err);
+        card.classList.remove('is-loading');
+      }
+    });
+
+    document.getElementById('lib-delete-cancel').addEventListener('click', () => {
+      document.getElementById('lib-delete-overlay').hidden = true;
+      _pendingDeleteId = null;
+    });
+    document.getElementById('lib-delete-confirm').addEventListener('click', async () => {
+      if (!_pendingDeleteId) return;
+      document.getElementById('lib-delete-overlay').hidden = true;
+      const id = _pendingDeleteId;
+      _pendingDeleteId = null;
+      const card = document.querySelector(`.lib-card[data-id="${id}"]`);
+      if (card) card.style.opacity = '0.4';
+      try {
+        await fbDeleteChart(id);
+        if (card) card.remove();
+        // Show empty state if no cards left
+        if (!document.querySelector('.lib-card')) {
+          document.getElementById('lib-grid').hidden = true;
+          document.getElementById('lib-empty').hidden = false;
+        }
+      } catch(e) {
+        console.error(e);
+        if (card) card.style.opacity = '';
+      }
+    });
+
+    fbAuth.onAuthStateChanged(async user => {
+      updateLibAuthUI(user);
+      document.getElementById('lib-loading').hidden = true;
+      if (!user) {
+        document.getElementById('lib-signed-out').hidden = false;
+        document.getElementById('lib-grid').hidden = true;
+        document.getElementById('lib-signin-btn').onclick = () => fbSignIn().catch(() => {});
+        return;
+      }
+      document.getElementById('lib-loading').hidden = false;
+      try {
+        const charts = await fbGetUserCharts();
+        document.getElementById('lib-loading').hidden = true;
+        if (!charts.length) {
+          document.getElementById('lib-empty').hidden = false;
+        } else {
+          renderGrid(charts);
+          document.getElementById('lib-grid').hidden = false;
+        }
+      } catch(e) {
+        console.error(e);
+        document.getElementById('lib-loading').hidden = true;
+      }
+    });
+  </script>
+</body>
+</html>

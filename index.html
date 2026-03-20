@@ -211,6 +211,7 @@
     <header class="site-header">
       <div class="header-wordmark">data-viz-lib</div>
       <p class="header-tagline">Find the right chart, fast. Preview it in your brand.</p>
+      <div class="header-auth" id="header-auth"></div>
     </header>
 
     <div class="recommender-wrap">
@@ -349,6 +350,29 @@
   <script src="https://cdn.jsdelivr.net/npm/vega@5/build/vega.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5/build/vega-lite.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6/build/vega-embed.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="app.js?v=41"></script>
+  <script>
+    if (typeof fbAuth !== 'undefined') {
+      fbAuth.onAuthStateChanged(user => {
+        const area = document.getElementById('header-auth');
+        if (!user) {
+          area.innerHTML = `<button class="hdr-signin-btn" id="hdr-signin-btn">Sign in</button>`;
+          document.getElementById('hdr-signin-btn').onclick = () => fbSignIn().catch(() => {});
+        } else {
+          const avatar = user.photoURL
+            ? `<img src="${user.photoURL}" class="bldr-avatar" alt="" onerror="this.style.display='none'">`
+            : `<span class="bldr-avatar-initial">${(user.displayName || '?')[0]}</span>`;
+          area.innerHTML = `
+            <a href="library.html" class="hdr-my-charts-link">My Charts</a>
+            <button class="bldr-avatar-btn" id="hdr-avatar-btn" title="${(user.displayName || '') + '\nClick to sign out'}">${avatar}</button>
+          `;
+          document.getElementById('hdr-avatar-btn').onclick = () => { if (confirm('Sign out?')) fbSignOut(); };
+        }
+      });
+    }
+  </script>
 </body>
 </html>
