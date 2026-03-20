@@ -2397,20 +2397,6 @@ body.sidebar-open .main {
   max-width: 460px;
 }
 
-.hero-sentence-card {
-  background: var(--color-surface, #fff);
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  padding: 20px 24px;
-  box-shadow: 0 2px 24px rgba(0,0,0,0.06);
-  width: 100%;
-  max-width: 700px;
-  margin-bottom: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .hero-sentence-row {
   display: flex;
   align-items: center;
@@ -2468,7 +2454,8 @@ body.sidebar-open .main {
 }
 
 .hero-cta-btn {
-  align-self: flex-end;
+  align-self: center;
+  margin-top: 24px;
   padding: 10px 22px;
   font-size: 14px;
   font-weight: 600;
