@@ -2456,6 +2456,7 @@ body.sidebar-open .main {
 .hero-cta-btn {
   align-self: center;
   margin-top: 24px;
+  margin-bottom: 40px;
   padding: 10px 22px;
   font-size: 14px;
   font-weight: 600;
