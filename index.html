@@ -3,14 +3,63 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>data-viz-lib — Find the right chart, fast</title>
-  <meta name="description" content="A searchable library of data visualisations. Find the right chart type, preview it in your brand theme, and build it with your data." />
+  <title>Datavizuals — Find the right chart, fast</title>
+  <meta name="description" content="Describe your data, find the right chart type, and build it in minutes." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@600;700&display=swap" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+  <!-- ── Hero ──────────────────────────────────────────────── -->
+  <section class="hero" id="hero">
+    <nav class="hero-nav">
+      <span class="hero-wordmark">Datavizuals</span>
+      <div class="hero-nav-auth" id="hero-auth"></div>
+    </nav>
+    <div class="hero-body">
+      <p class="hero-eyebrow">Chart finder &amp; builder</p>
+      <h1 class="hero-headline">Find the chart<br>your data deserves.</h1>
+      <p class="hero-sub">Describe what you're working with and we'll point you straight to the right chart type.</p>
+      <div class="hero-sentence-card">
+        <div class="hero-sentence-row">
+          <span class="hero-sentence-text">My data shows</span>
+          <div class="hero-sel-wrap">
+            <select id="hero-rec-data" class="hero-sel">
+              <option value="">data structure</option>
+              <option value="single">a single number</option>
+              <option value="per_cat">one value per category</option>
+              <option value="over_time">values over time</option>
+              <option value="series_time">several series over time</option>
+              <option value="spread">a spread of values</option>
+              <option value="two_num">two numeric variables</option>
+              <option value="parts">parts of a whole</option>
+              <option value="location">values by location</option>
+              <option value="hierarchy">hierarchy</option>
+              <option value="flow">flow between things</option>
+            </select>
+          </div>
+          <span class="hero-sentence-text">and I want to</span>
+          <div class="hero-sel-wrap">
+            <select id="hero-rec-goal" class="hero-sel">
+              <option value="">show goal</option>
+              <option value="compare">compare values</option>
+              <option value="change">show change over time</option>
+              <option value="distribution">show distribution</option>
+              <option value="relationships">show relationships</option>
+              <option value="composition">show parts of a whole</option>
+              <option value="ranking">show ranking</option>
+              <option value="geographic">show geographic patterns</option>
+              <option value="movement">show movement or flow</option>
+            </select>
+          </div>
+        </div>
+        <button class="hero-cta-btn" id="hero-cta-btn">Show me charts →</button>
+      </div>
+      <button class="hero-scroll-link" id="hero-scroll-link">or browse all 50+ charts ↓</button>
+    </div>
+  </section>
 
   <!-- ── Sidebar ───────────────────────────────────────────── -->
   <aside id="sidebar" class="sidebar sidebar--collapsed">
@@ -185,13 +234,14 @@
         </div>
       </div>
 
-      <div class="sidebar-section sidebar-section--muted">
+      <div class="sidebar-section" id="sidebar-account-section">
         <div class="sidebar-section-header">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="2" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M5 7h4M7 5v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="5" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 12c0-2.761 2.239-5 5-5s5 2.239 5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
           <span>Account</span>
-          <span class="coming-soon-pill">Soon</span>
         </div>
-        <p class="sidebar-coming-soon">Save themes, bookmark charts, and share collections.</p>
+        <div id="sidebar-auth-content">
+          <!-- populated by JS -->
+        </div>
       </div>
     </div>
 
@@ -209,8 +259,7 @@
   <main id="main" class="main">
 
     <header class="site-header">
-      <div class="header-wordmark">data-viz-lib</div>
-      <p class="header-tagline">Find the right chart, fast. Preview it in your brand.</p>
+      <div class="header-wordmark">Datavizuals</div>
       <div class="header-auth" id="header-auth"></div>
     </header>
 
@@ -355,23 +404,61 @@
   <script src="firebase-config.js"></script>
   <script src="app.js?v=41"></script>
   <script>
-    if (typeof fbAuth !== 'undefined') {
-      fbAuth.onAuthStateChanged(user => {
-        const area = document.getElementById('header-auth');
-        if (!user) {
-          area.innerHTML = `<button class="hdr-signin-btn" id="hdr-signin-btn">Sign in</button>`;
-          document.getElementById('hdr-signin-btn').onclick = () => fbSignIn().catch(() => {});
-        } else {
-          const avatar = user.photoURL
-            ? `<img src="${user.photoURL}" class="bldr-avatar" alt="" onerror="this.style.display='none'">`
-            : `<span class="bldr-avatar-initial">${(user.displayName || '?')[0]}</span>`;
-          area.innerHTML = `
-            <a href="library.html" class="hdr-my-charts-link">My Charts</a>
-            <button class="bldr-avatar-btn" id="hdr-avatar-btn" title="${(user.displayName || '') + '\nClick to sign out'}">${avatar}</button>
-          `;
-          document.getElementById('hdr-avatar-btn').onclick = () => { if (confirm('Sign out?')) fbSignOut(); };
-        }
+    // ── Hero interactions ──────────────────────────────────
+    document.getElementById('hero-cta-btn').addEventListener('click', function() {
+      const dataVal = document.getElementById('hero-rec-data').value;
+      const goalVal = document.getElementById('hero-rec-goal').value;
+      const recData = document.getElementById('rec-data');
+      const recGoal = document.getElementById('rec-goal');
+      if (dataVal) { recData.value = dataVal; recData.classList.add('has-value'); recData.dispatchEvent(new Event('change')); }
+      if (goalVal) { recGoal.value = goalVal; recGoal.classList.add('has-value'); recGoal.dispatchEvent(new Event('change')); }
+      document.getElementById('main').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    document.getElementById('hero-scroll-link').addEventListener('click', function() {
+      document.getElementById('main').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    ['hero-rec-data', 'hero-rec-goal'].forEach(function(id) {
+      document.getElementById(id).addEventListener('change', function() {
+        this.classList.toggle('has-value', !!this.value);
       });
+    });
+
+    // ── Firebase auth UI ───────────────────────────────────
+    function buildAuthUI(user) {
+      // Hero nav auth
+      const heroAuth = document.getElementById('hero-auth');
+      // Catalog header auth
+      const headerAuth = document.getElementById('header-auth');
+      // Sidebar auth
+      const sidebarAuth = document.getElementById('sidebar-auth-content');
+
+      if (!user) {
+        const signinBtn = `<button class="hdr-signin-btn" onclick="fbSignIn().catch(()=>{})">Sign in</button>`;
+        if (heroAuth)   heroAuth.innerHTML   = signinBtn;
+        if (headerAuth) headerAuth.innerHTML = signinBtn;
+        if (sidebarAuth) sidebarAuth.innerHTML = `<button class="sidebar-signin-btn" onclick="fbSignIn().catch(()=>{})">Sign in with Google</button>`;
+      } else {
+        const avatar = user.photoURL
+          ? `<img src="${user.photoURL}" class="bldr-avatar" alt="" onerror="this.style.display='none'">`
+          : `<span class="bldr-avatar-initial">${(user.displayName || '?')[0]}</span>`;
+        const signedInHTML = `
+          <a href="library.html" class="hdr-my-charts-link">My Charts</a>
+          <button class="bldr-avatar-btn" onclick="if(confirm('Sign out?'))fbSignOut()" title="${(user.displayName || '') + '\nClick to sign out'}">${avatar}</button>
+        `;
+        if (heroAuth)   heroAuth.innerHTML   = signedInHTML;
+        if (headerAuth) headerAuth.innerHTML = signedInHTML;
+        if (sidebarAuth) sidebarAuth.innerHTML = `
+          <p class="sidebar-auth-name">${user.displayName || user.email || 'Signed in'}</p>
+          <a href="library.html" class="sidebar-my-charts-link">My Charts →</a>
+          <button class="sidebar-signout-btn" onclick="if(confirm('Sign out?'))fbSignOut()">Sign out</button>
+        `;
+      }
+    }
+
+    if (typeof fbAuth !== 'undefined') {
+      fbAuth.onAuthStateChanged(buildAuthUI);
     }
   </script>
 </body>
