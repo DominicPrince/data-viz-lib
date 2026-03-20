@@ -293,7 +293,6 @@
             <option value="movement">show movement or flow</option>
           </select>
         </span>
-        <span class="rec-text rec-period">.</span>
         <button id="rec-reset" class="rec-reset" hidden>Clear</button>
       </div>
     </div>
@@ -422,6 +421,50 @@
         this.classList.toggle('has-value', !!this.value);
       });
     });
+
+    // ── Hero select cycling ────────────────────────────────
+    (function() {
+      var combos = [
+        ['over_time',   'change'],
+        ['per_cat',     'compare'],
+        ['parts',       'composition'],
+        ['two_num',     'relationships'],
+        ['spread',      'distribution'],
+        ['per_cat',     'ranking'],
+        ['series_time', 'change'],
+        ['hierarchy',   'composition'],
+        ['location',    'geographic'],
+        ['flow',        'movement'],
+      ];
+      var dataEl = document.getElementById('hero-rec-data');
+      var goalEl = document.getElementById('hero-rec-goal');
+      var idx = 0;
+      var paused = false;
+      var intervalId;
+
+      function applyCombo(combo) {
+        dataEl.value = combo[0];
+        goalEl.value = combo[1];
+        dataEl.classList.add('has-value');
+        goalEl.classList.add('has-value');
+      }
+
+      function step() {
+        if (paused) return;
+        idx = (idx + 1) % combos.length;
+        applyCombo(combos[idx]);
+      }
+
+      applyCombo(combos[0]);
+      intervalId = setInterval(step, 2200);
+
+      [dataEl, goalEl].forEach(function(el) {
+        el.addEventListener('mousedown', function() {
+          paused = true;
+          clearInterval(intervalId);
+        });
+      });
+    })();
 
     // ── Firebase auth UI ───────────────────────────────────
     function buildAuthUI(user) {

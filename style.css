@@ -463,9 +463,6 @@ body.sidebar-open .main {
   white-space: nowrap;
 }
 
-.rec-period {
-  color: var(--color-muted);
-}
 
 .rec-select-wrap {
   position: relative;
