@@ -1336,6 +1336,30 @@ body.sidebar-open .main {
   min-height: 18px;
 }
 
+.b-interactive-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.b-interactive-label input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.b-interactive-hint {
+  font-size: 10px;
+  color: var(--color-muted);
+  margin: 4px 0 0 21px;
+  line-height: 1.4;
+}
+
 .config-field-value {
   float: right;
   font-size: 11px;

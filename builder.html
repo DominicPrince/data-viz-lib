@@ -169,6 +169,10 @@
           <button class="export-btn" id="b-dl-png">Download PNG</button>
           <button class="export-btn" id="b-copy-embed">Copy Embed</button>
         </div>
+        <label class="b-interactive-label">
+          <input type="checkbox" id="b-interactive"> Interactive embed
+        </label>
+        <p class="b-interactive-hint">Hover tooltips on chart elements. Uses inline SVG (not &lt;img&gt;).</p>
         <div class="export-feedback" id="export-feedback"></div>
       </div>
 
@@ -305,6 +309,20 @@
   }
 
   /* Returns inner SVG content only (no wrapping <svg> or background rect) */
+  /* Build a CSS-hover tooltip <g class="tt"> for interactive SVG embeds.
+     tipCx/tipCy: anchor point (e.g. bar top, dot centre).
+     above: if true, box appears above the anchor; false = below.
+     chartW: SVG width used to clamp horizontal position. */
+  function makeTT(tipCx, tipCy, text, font, textColor, bg, above, chartW) {
+    chartW = chartW || 560;
+    above  = above !== false;
+    const cw = Math.max(60, Math.min(200, text.length * 7 + 20));
+    const ch = 22;
+    const tx = Math.max(4, Math.min(chartW - cw - 4, tipCx - cw / 2));
+    const ty = above ? tipCy - ch - 8 : tipCy + 8;
+    return `<g class="tt"><rect rx="4" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" width="${cw}" height="${ch}" fill="${bg}" opacity="0.95" stroke="${textColor}" stroke-width="0.5" stroke-opacity="0.25"/><text x="${(tx + cw / 2).toFixed(1)}" y="${(ty + 15).toFixed(1)}" font-size="11" font-family="${font}" fill="${textColor}" text-anchor="middle">${escSVG(text)}</text></g>`;
+  }
+
   function renderBarChartInner(theme, data, chartStyle, options) {
     const W = 560, H = 300;
     const pad = { top: 16, right: 16, bottom: 40, left: 50 };
@@ -356,6 +374,7 @@
       ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
       : '';
 
+    const interactive = options?.interactive || false;
     const bars = data.map((d, i) => {
       const x = xMid(i) - bW / 2, y = yV(d.value), h = yBase - y;
       const fill = options?.barColors?.[i] || c0;
@@ -373,6 +392,11 @@
       const labelHit = axisLabels
         ? `<rect data-editable="bar-label-${i}" x="${(xMid(i) - slot / 2 + 2).toFixed(1)}" y="${(pad.top + cH + 4).toFixed(1)}" width="${(slot - 4).toFixed(1)}" height="${(pad.bottom - 8).toFixed(1)}" fill="transparent" style="cursor:text"/>`
         : '';
+      if (interactive) {
+        const tipAbove = y > 30;
+        const tt = makeTT(xMid(i), tipAbove ? y : y + h, fmtTick(d.value), font, textColor, effectiveTheme.bg, tipAbove);
+        return `<g class="ci"><g class="ci-el">${bar}${ring}</g>${labelHit}${lbl}${tt}</g>`;
+      }
       return bar + ring + labelHit + lbl;
     }).join('');
 
@@ -467,6 +491,7 @@
     const fid = glow ? 'bbl' + Math.random().toString(36).slice(2, 6) : '';
     const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
 
+    const interactive = options?.interactive || false;
     const bubbles = data.map((d, i) => {
       const cx = scX(+d.x || 0), cy = scY(+d.y || 0);
       const r  = rOf(Math.max(+d.size || 1, 0.01));
@@ -483,6 +508,11 @@
         ? `<text data-editable="bubble-label-${i}" x="${cx.toFixed(1)}" y="${lblY.toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${escSVG(d.label)}</text>`
         : `<rect data-editable="bubble-label-${i}" x="${(cx - 22).toFixed(1)}" y="${rectY.toFixed(1)}" width="44" height="13" fill="transparent" style="cursor:text"/>`;
 
+      if (interactive) {
+        const ttText = (d.label ? d.label + ': ' : '') + fmtTick(d.size);
+        const tt = makeTT(cx, cy - r, ttText, font, textColor, effectiveTheme.bg, true);
+        return `<g class="ci"><g class="ci-el">${circle}${ring}</g>${lbl}${tt}</g>`;
+      }
       return circle + ring + lbl;
     }).join('');
 
@@ -556,6 +586,7 @@
       ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
       : '';
 
+    const interactive = options?.interactive || false;
     const lollipops = data.map((d, i) => {
       const cx = xMid(i), cy = yV(d.value);
       const fill = options?.barColors?.[i] || c0;
@@ -571,6 +602,10 @@
       const labelHit = axisLabels
         ? `<rect data-editable="bar-label-${i}" x="${(cx - slot / 2 + 2).toFixed(1)}" y="${(yBase + 4).toFixed(1)}" width="${(slot - 4).toFixed(1)}" height="${(pad.bottom - 8).toFixed(1)}" fill="transparent" style="cursor:text"/>`
         : '';
+      if (interactive) {
+        const tt = makeTT(cx, cy - dotR, fmtTick(d.value), font, textColor, effectiveTheme.bg, true);
+        return `<g class="ci"><g class="ci-el">${stem}${dot}${ring}</g>${labelHit}${lbl}${tt}</g>`;
+      }
       return stem + dot + ring + labelHit + lbl;
     }).join('');
 
@@ -646,6 +681,7 @@
       ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
       : '';
 
+    const interactive = options?.interactive || false;
     const dots = data.map((d, i) => {
       const cx = scX(d.value), cy = rowCy(i);
       const fill = options?.barColors?.[i] || c0;
@@ -661,6 +697,11 @@
       const labelHit = axisLabels
         ? `<rect data-editable="bar-label-${i}" x="0" y="${(cy - rowH / 2).toFixed(1)}" width="${(pad.left - 4).toFixed(1)}" height="${rowH.toFixed(1)}" fill="transparent" style="cursor:text"/>`
         : '';
+      if (interactive) {
+        const ttText = (d.label ? d.label + ': ' : '') + fmtTick(d.value);
+        const tt = makeTT(cx, cy, ttText, font, textColor, effectiveTheme.bg, cy > 30);
+        return `<g class="ci"><g class="ci-el">${dot}${ring}</g>${rowLine}${labelHit}${labelText}${tt}</g>`;
+      }
       return rowLine + dot + ring + labelHit + labelText;
     }).join('');
 
@@ -762,9 +803,18 @@
     const lineEl = `<path d="${pathD}" fill="none" stroke="${lineColor}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"${glowAttr}/>`;
 
     // Dots at each data point
-    const dotsEl = pts.map((p, i) =>
-      `<circle data-bar-idx="${i}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="${lineColor}" stroke="${effectiveTheme.bg}" stroke-width="1.5"/>`
-    ).join('');
+    const interactive = options?.interactive || false;
+    const dotsEl = pts.map((p, i) => {
+      const dot = `<circle data-bar-idx="${i}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="${lineColor}" stroke="${effectiveTheme.bg}" stroke-width="1.5"/>`;
+      if (interactive) {
+        const d = data[i];
+        const label = d.label || d.date || '';
+        const ttText = (label ? label + ': ' : '') + fmtTick(d.value);
+        const tt = makeTT(p.x, p.y, ttText, font, textColor, effectiveTheme.bg, p.y > 30);
+        return `<g class="ci"><g class="ci-el">${dot}</g>${tt}</g>`;
+      }
+      return dot;
+    }).join('');
 
     let axisLabelsSVG = '';
     if (xLabelLines.length) {
@@ -835,6 +885,7 @@
       : '';
     const glowAttr = glow ? ` filter="url(#${fid})"` : '';
 
+    const interactive = options?.interactive || false;
     let valueLabels = '', legendItems = '';
     let startAngle = -Math.PI / 2;
     let slices = '';
@@ -875,7 +926,18 @@
         }
         sliceEl = `<path data-bar-idx="${i}" d="${d_attr}" fill="${fill}" fill-opacity="${isSelected ? 1 : 0.88}" stroke="${effectiveTheme.bg}" stroke-width="1"/>`;
       }
-      slices += sliceEl;
+
+      if (interactive) {
+        const pct = Math.round(val / total * 100);
+        const ttText = d.label ? d.label + ': ' + pct + '%' : pct + '%';
+        const depth = variant === 'donut' ? (R + innerR) / 2 : R * 0.62;
+        const ttCx = cx + depth * Math.cos(midAngle);
+        const ttCy = cy + depth * Math.sin(midAngle);
+        const tt = makeTT(ttCx, ttCy, ttText, font, textColor, effectiveTheme.bg, midAngle < 0 || midAngle > Math.PI);
+        slices += `<g class="ci"><g class="ci-el">${sliceEl}</g>${tt}</g>`;
+      } else {
+        slices += sliceEl;
+      }
 
       if (showValues) {
         const pct     = Math.round(val / total * 100);
@@ -1052,6 +1114,7 @@
     const fid = glow ? 'sct' + Math.random().toString(36).slice(2, 6) : '';
     const filterDef = glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="${glowSD}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
 
+    const interactive = options?.interactive || false;
     const dots = data.map((d, i) => {
       const px = scX(+d.x || 0), py = scY(+d.y || 0);
       const fill = options?.barColors?.[i] || c0;
@@ -1065,6 +1128,11 @@
       const lbl    = d.label
         ? `<text data-editable="scatter-label-${i}" x="${px.toFixed(1)}" y="${lblY.toFixed(1)}" text-anchor="middle" font-size="10" font-family="${font}" fill="${textColor}">${escSVG(d.label)}</text>`
         : `<rect data-editable="scatter-label-${i}" x="${(px - 22).toFixed(1)}" y="${rectY.toFixed(1)}" width="44" height="13" fill="transparent" style="cursor:text"/>`;
+      if (interactive) {
+        const ttText = (d.label ? d.label + ': ' : '') + '(' + fmtTick(+d.x) + ', ' + fmtTick(+d.y) + ')';
+        const tt = makeTT(px, py, ttText, font, textColor, effectiveTheme.bg, py > 30);
+        return `<g class="ci"><g class="ci-el">${circle}${ring}</g>${lbl}${tt}</g>`;
+      }
       return circle + ring + lbl;
     }).join('');
 
@@ -1156,6 +1224,8 @@
     const { theme, options, chartStyle } = state;
     const { title, subtitle, source, logoDataUrl } = options;
     const bg = options?.bgColor || theme.bg;
+    const interactive = options?.interactive || false;
+    const chartUid = interactive ? 'c' + Math.random().toString(36).slice(2, 9) : '';
 
     const tok = chartTokens({ ...theme, bg }, chartStyle);
     const font = tok.font;
@@ -1180,7 +1250,11 @@
       ? hexToRgba(options.fontColor, 0.6)
       : (dark ? 'rgba(255,255,255,0.45)' : '#767676');
 
-    let out = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${totalH}">`;
+    let out = `<svg${interactive ? ` id="${chartUid}"` : ''} xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${totalH}">`;
+    if (interactive) {
+      const s = '#' + chartUid;
+      out += `<style>${s} .ci{cursor:pointer}${s} .ci .ci-el{transition:opacity .15s}${s} .ci:hover .ci-el{opacity:.75}${s} .ci .tt{opacity:0;transition:opacity .15s;pointer-events:none}${s} .ci:hover .tt{opacity:1}</style>`;
+    }
     out += `<rect width="${W}" height="${totalH}" fill="${bg}"/>`;
 
     let ty = 0;
@@ -1251,7 +1325,7 @@
     options: {
       title: '', subtitle: '', source: '', logoDataUrl: null, xLabel: '', yLabel: '',
       fontColor: '', labelColor: '', bgColor: '', logoSize: 12, barColors: [], selectedBar: -1,
-      yMin: '', yMax: '', xMin: '', xMax: '', showValues: true, showLegend: true,
+      yMin: '', yMax: '', xMin: '', xMax: '', showValues: true, showLegend: true, interactive: false,
       ...(loaded.options || {}), selectedBar: -1,
     },
   };
@@ -1893,6 +1967,13 @@
     rerender();
   });
 
+  const interactiveToggle = document.getElementById('b-interactive');
+  interactiveToggle.checked = bState.options.interactive || false;
+  interactiveToggle.addEventListener('change', e => {
+    bState.options.interactive = e.target.checked;
+    rerender();
+  });
+
   // Line colour — only shown for line/area/step charts
   const _isLineVariant = ['line-chart', 'area-chart', 'step-chart'].includes(chartId);
   if (_isLineVariant) {
@@ -1928,6 +2009,7 @@
     if (o.bgColor)    { bgColorInput.value = o.bgColor;       bgColorHex.textContent = o.bgColor;       bgColorAuto.classList.remove('is-auto'); }
     if (o.fontColor)  { fontColorInput.value = o.fontColor;   fontColorHex.textContent = o.fontColor;   fontColorAuto.classList.remove('is-auto'); }
     if (o.labelColor) { labelColorInput.value = o.labelColor; labelColorHex.textContent = o.labelColor; labelColorAuto.classList.remove('is-auto'); }
+    interactiveToggle.checked = o.interactive || false;
   }
 
   /* ─────────────────────────────────────────────────────────
@@ -1979,10 +2061,15 @@
   });
 
   document.getElementById('b-copy-embed').addEventListener('click', () => {
-    const b64 = btoa(unescape(encodeURIComponent(currentSVG)));
-    const snippet = `<img src="data:image/svg+xml;base64,${b64}" alt="Chart" style="max-width:100%">`;
+    let snippet;
+    if (bState.options.interactive) {
+      snippet = `<div style="display:inline-block;max-width:100%;overflow:hidden">${currentSVG}</div>`;
+    } else {
+      const b64 = btoa(unescape(encodeURIComponent(currentSVG)));
+      snippet = `<img src="data:image/svg+xml;base64,${b64}" alt="Chart" style="max-width:100%">`;
+    }
     navigator.clipboard.writeText(snippet)
-      .then(() => showFeedback('Embed snippet copied'))
+      .then(() => showFeedback(bState.options.interactive ? 'Interactive embed copied' : 'Embed snippet copied'))
       .catch(() => showFeedback('Copy failed'));
   });
 
