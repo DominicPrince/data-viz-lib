@@ -1,11 +1,11 @@
 (function() {
   const cfg = {
-    apiKey: "AIzaSyBJLk_6WTTUyLKhRGheqUrcDuWDeNL4F6U",
-    authDomain: "data-viz-lib.firebaseapp.com",
-    projectId: "data-viz-lib",
-    storageBucket: "data-viz-lib.firebasestorage.app",
-    messagingSenderId: "282022303172",
-    appId: "1:282022303172:web:581e33a67617a2daaec091",
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID",
   };
   if (!firebase.apps.length) firebase.initializeApp(cfg);
 
