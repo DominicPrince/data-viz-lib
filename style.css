@@ -2481,7 +2481,7 @@ body.sidebar-open .main {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: 44px 8px 0;
   white-space: nowrap;
   text-shadow:
     0 -14px 0 rgba(28, 26, 23, 0.28),
