@@ -413,16 +413,11 @@ body.site-dark .site-mode-slider { left: 50%; }
 
 /* ── Main layout ──────────────────────────────────────────── */
 .main {
-  margin-left: var(--sidebar-w-collapsed);
   flex: 1;
   padding: 48px 40px 80px;
-  transition: margin-left var(--transition);
-  max-width: calc(100vw - var(--sidebar-w-collapsed));
-}
-
-body.sidebar-open .main {
-  margin-left: var(--sidebar-w-expanded);
-  max-width: calc(100vw - var(--sidebar-w-expanded));
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* ── Header ───────────────────────────────────────────────── */
@@ -533,11 +528,64 @@ body.sidebar-open .main {
 }
 
 /* ── Filter pills ─────────────────────────────────────────── */
+/* ── Catalog toolbar ──────────────────────────────────────── */
+.catalog-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
 .filter-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 24px;
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.catalog-controls {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.catalog-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23767676' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 8px center;
+  padding: 4px 28px 4px 10px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+  white-space: nowrap;
+}
+.catalog-select:hover { border-color: var(--color-text); color: var(--color-text); }
+.catalog-select:focus { outline: none; border-color: var(--color-text); color: var(--color-text); }
+
+/* ── Site footer ──────────────────────────────────────────── */
+.site-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 80px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+}
+
+.site-footer-wordmark {
+  font-family: 'Inter Tight', 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: var(--color-muted);
 }
 
 .filter-pill {

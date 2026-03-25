@@ -1065,22 +1065,24 @@ const paletteSwatches = $('palette-swatches');
 const addPaletteColor = $('add-palette-color');
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
-sidebar.addEventListener('click', e => {
-  if (sidebar.classList.contains('sidebar--collapsed')) {
-    sidebar.classList.remove('sidebar--collapsed');
-    document.body.classList.add('sidebar-open');
-  } else if (e.target === sidebarToggle || sidebarToggle.contains(e.target)) {
-    sidebar.classList.add('sidebar--collapsed');
-    document.body.classList.remove('sidebar-open');
-  }
-});
+if (sidebar) {
+  sidebar.addEventListener('click', e => {
+    if (sidebar.classList.contains('sidebar--collapsed')) {
+      sidebar.classList.remove('sidebar--collapsed');
+      document.body.classList.add('sidebar-open');
+    } else if (e.target === sidebarToggle || sidebarToggle.contains(e.target)) {
+      sidebar.classList.add('sidebar--collapsed');
+      document.body.classList.remove('sidebar-open');
+    }
+  });
 
-document.addEventListener('click', e => {
-  if (!sidebar.classList.contains('sidebar--collapsed') && !sidebar.contains(e.target)) {
-    sidebar.classList.add('sidebar--collapsed');
-    document.body.classList.remove('sidebar-open');
-  }
-});
+  document.addEventListener('click', e => {
+    if (!sidebar.classList.contains('sidebar--collapsed') && !sidebar.contains(e.target)) {
+      sidebar.classList.add('sidebar--collapsed');
+      document.body.classList.remove('sidebar-open');
+    }
+  });
+}
 
 /* ── Chart recommender mapping ───────────────────────────────────────────── */
 // Keys: '<dataStructure>:<goal>' → ordered array of vizIds
@@ -3813,18 +3815,47 @@ document.querySelectorAll('.site-mode-opt').forEach(btn => {
 });
 
 /* ── Theme ───────────────────────────────────────────────────────────────── */
-colorBg.addEventListener('input', () => {
+if (colorBg) colorBg.addEventListener('input', () => {
   state.theme.bg = colorBg.value;
   colorBgHex.textContent = colorBg.value;
   saveCustomTheme();
   applyTheme();
 });
 
-fontSelect.addEventListener('change', () => {
+if (fontSelect) fontSelect.addEventListener('change', () => {
   state.theme.font = fontSelect.value;
   saveCustomTheme();
   applyTheme();
 });
+
+/* ── Catalog inline controls ─────────────────────────────────────────────── */
+const catalogThemeSel = document.getElementById('catalog-theme-select');
+const catalogStyleSel = document.getElementById('catalog-style-select');
+if (catalogThemeSel) {
+  catalogThemeSel.addEventListener('change', () => {
+    applyPreset(catalogThemeSel.value);
+    if (catalogStyleSel) catalogStyleSel.value = state.chartStyle;
+  });
+}
+if (catalogStyleSel) {
+  catalogStyleSel.addEventListener('change', () => {
+    state.chartStyle = catalogStyleSel.value;
+    state.catalog.forEach(v => renderCardChart(v.id));
+    if (state.openVizId) {
+      modalChart.innerHTML = '';
+      if (!renderCustomChart(state.openVizId, modalChart, state.theme)) {
+        const spec = getVegaSpec(state.openVizId, false);
+        if (spec) {
+          spec.config = buildVegaConfig(state.theme, false);
+          spec.background = state.theme.bg;
+          spec.width = 'container';
+          spec.autosize = { type: 'fit', resize: true };
+          vegaEmbed(modalChart, spec, { actions: false, renderer: 'svg' }).catch(() => {});
+        }
+      }
+    }
+  });
+}
 
 document.querySelectorAll('.preset-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -3838,11 +3869,11 @@ function applyPreset(name) {
   const preset = PRESETS[name];
   if (!preset) return;
   Object.assign(state.theme, { ...preset, palette: [...preset.palette] });
-  colorBg.value = preset.bg;
-  colorBgHex.textContent = preset.bg;
-  fontSelect.value = preset.font;
-  renderPaletteSwatches();
-  document.getElementById('custom-controls').style.display = name === 'custom' ? '' : 'none';
+  if (colorBg) { colorBg.value = preset.bg; colorBgHex.textContent = preset.bg; }
+  if (fontSelect) fontSelect.value = preset.font;
+  if (paletteSwatches) renderPaletteSwatches();
+  const customControls = document.getElementById('custom-controls');
+  if (customControls) customControls.style.display = name === 'custom' ? '' : 'none';
   // Journeys preset → auto-apply Journeys chart style
   if (name === 'journeys') {
     state.chartStyle = 'journeys';
@@ -3934,7 +3965,7 @@ function renderPaletteSwatches() {
   });
 }
 
-addPaletteColor.addEventListener('click', () => {
+if (addPaletteColor) addPaletteColor.addEventListener('click', () => {
   if (state.theme.palette.length < 10) {
     state.theme.palette.push('#888888');
     renderPaletteSwatches();
