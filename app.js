@@ -3929,6 +3929,7 @@ function applyTheme() {
 
 /* ── Palette swatches ────────────────────────────────────────────────────── */
 function renderPaletteSwatches() {
+  if (!paletteSwatches) return;
   paletteSwatches.innerHTML = '';
   updatePaletteSuggestions();
   state.theme.palette.forEach((color, i) => {
@@ -4094,6 +4095,7 @@ function updatePaletteSuggestions() {
 /* ── Saved palettes ──────────────────────────────────────────────────────── */
 function renderSavedPresets() {
   const container = document.getElementById('saved-presets-container');
+  if (!container) return;
   container.innerHTML = '';
   state.savedPalettes.forEach((p, i) => {
     const btn = document.createElement('button');
@@ -4106,20 +4108,18 @@ function renderSavedPresets() {
       document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       Object.assign(state.theme, { ...p, palette: [...p.palette] });
-      colorAccent.value = p.accent;
-      colorAccentHex.textContent = p.accent;
-      colorBg.value = p.bg;
-      colorBgHex.textContent = p.bg;
-      fontSelect.value = p.font;
+      if (colorBg) { colorBg.value = p.bg; colorBgHex.textContent = p.bg; }
+      if (fontSelect) fontSelect.value = p.font;
       renderPaletteSwatches();
-      document.getElementById('custom-controls').style.display = 'none';
+      const cc = document.getElementById('custom-controls');
+      if (cc) cc.style.display = 'none';
       applyTheme();
     });
     container.appendChild(btn);
   });
 }
 
-document.getElementById('save-palette-btn').addEventListener('click', () => {
+document.getElementById('save-palette-btn')?.addEventListener('click', () => {
   const nameInput = document.getElementById('palette-name-input');
   const name = nameInput.value.trim();
   if (!name) { nameInput.focus(); return; }
