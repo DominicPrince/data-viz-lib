@@ -349,6 +349,19 @@
         flapTo(flapGoal, getOptionText(goalEl, combo[1]), animate);
       }
 
+      // Lock each flap to the width of its longest option so layout never shifts
+      function lockFlapWidth(flapEl, selectEl) {
+        var longest = '';
+        for (var i = 0; i < selectEl.options.length; i++) {
+          if (selectEl.options[i].text.length > longest.length)
+            longest = selectEl.options[i].text;
+        }
+        buildFlap(flapEl, longest);
+        flapEl.style.width = flapEl.offsetWidth + 'px';
+      }
+      lockFlapWidth(flapData, dataEl);
+      lockFlapWidth(flapGoal, goalEl);
+
       applyCombo(combos[0], false);
       intervalId = setInterval(function() {
         if (paused) return;
