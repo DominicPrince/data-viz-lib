@@ -25,7 +25,11 @@
       <div class="hero-sentence-row">
         <span class="hero-sentence-text">My data shows</span>
         <div class="hero-sel-wrap">
-          <select id="hero-rec-data" class="hero-sel">
+          <div class="hero-flap" id="hero-flap-data">
+            <div class="flap-upper"><span class="flap-text">values over time</span></div>
+            <div class="flap-lower"><span class="flap-text">values over time</span></div>
+          </div>
+          <select id="hero-rec-data" class="hero-sel hero-sel--overlay">
             <option value="">data structure</option>
             <option value="single">a single number</option>
             <option value="per_cat">one value per category</option>
@@ -41,7 +45,11 @@
         </div>
         <span class="hero-sentence-text">and I want to</span>
         <div class="hero-sel-wrap">
-          <select id="hero-rec-goal" class="hero-sel">
+          <div class="hero-flap" id="hero-flap-goal">
+            <div class="flap-upper"><span class="flap-text">show change over time</span></div>
+            <div class="flap-lower"><span class="flap-text">show change over time</span></div>
+          </div>
+          <select id="hero-rec-goal" class="hero-sel hero-sel--overlay">
             <option value="">show goal</option>
             <option value="compare">compare values</option>
             <option value="change">show change over time</option>
@@ -272,32 +280,69 @@
         ['location',    'geographic'],
         ['flow',        'movement'],
       ];
-      var dataEl = document.getElementById('hero-rec-data');
-      var goalEl = document.getElementById('hero-rec-goal');
+      var dataEl  = document.getElementById('hero-rec-data');
+      var goalEl  = document.getElementById('hero-rec-goal');
+      var flapData = document.getElementById('hero-flap-data');
+      var flapGoal = document.getElementById('hero-flap-goal');
       var idx = 0;
       var paused = false;
       var intervalId;
 
-      function applyCombo(combo) {
+      function getOptionText(sel, val) {
+        for (var i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === val) return sel.options[i].text;
+        }
+        return val;
+      }
+
+      function flapTo(flapEl, newText, animate) {
+        if (!flapEl) return;
+        var upper     = flapEl.querySelector('.flap-upper');
+        var lower     = flapEl.querySelector('.flap-lower');
+        var upperText = upper.querySelector('.flap-text');
+        var lowerText = lower.querySelector('.flap-text');
+        if (!animate) {
+          upperText.textContent = newText;
+          lowerText.textContent = newText;
+          return;
+        }
+        upper.classList.remove('flap-folding');
+        lower.classList.remove('flap-unfolding');
+        void upper.offsetWidth; // force reflow to restart animation
+        upper.classList.add('flap-folding');
+        setTimeout(function() {
+          upperText.textContent = newText;
+          lowerText.textContent = newText;
+          upper.classList.remove('flap-folding');
+          lower.classList.add('flap-unfolding');
+          setTimeout(function() {
+            lower.classList.remove('flap-unfolding');
+          }, 120);
+        }, 110);
+      }
+
+      function applyCombo(combo, animate) {
         dataEl.value = combo[0];
         goalEl.value = combo[1];
-        dataEl.classList.add('has-value');
-        goalEl.classList.add('has-value');
+        flapTo(flapData, getOptionText(dataEl, combo[0]), animate);
+        flapTo(flapGoal, getOptionText(goalEl, combo[1]), animate);
       }
 
-      function step() {
+      applyCombo(combos[0], false);
+      intervalId = setInterval(function() {
         if (paused) return;
         idx = (idx + 1) % combos.length;
-        applyCombo(combos[idx]);
-      }
+        applyCombo(combos[idx], true);
+      }, 2200);
 
-      applyCombo(combos[0]);
-      intervalId = setInterval(step, 2200);
-
-      [dataEl, goalEl].forEach(function(el) {
+      [dataEl, goalEl].forEach(function(el, i) {
         el.addEventListener('mousedown', function() {
           paused = true;
           clearInterval(intervalId);
+        });
+        el.addEventListener('change', function() {
+          var flap = i === 0 ? flapData : flapGoal;
+          flapTo(flap, this.options[this.selectedIndex].text, true);
         });
       });
     })();

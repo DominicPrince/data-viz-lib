@@ -2473,6 +2473,60 @@ body.site-dark .site-mode-slider { left: 50%; }
   border-right: 4px solid transparent;
   border-top: 5px solid var(--color-muted);
   pointer-events: none;
+  z-index: 3;
+}
+
+/* ── Split-flap display ───────────────────────────────── */
+.hero-flap {
+  display: inline-block;
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-text);
+  border-radius: 8px;
+  padding: 8px 32px 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--color-text);
+  min-width: 200px;
+  cursor: pointer;
+  user-select: none;
+  vertical-align: middle;
+}
+
+.flap-upper,
+.flap-lower {
+  display: block;
+  height: 0.6em;
+  overflow: hidden;
+  line-height: 1.2;
+}
+
+.flap-upper {
+  transform-origin: bottom center;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+}
+
+.flap-lower .flap-text {
+  display: block;
+  margin-top: -0.6em;
+}
+
+.flap-upper.flap-folding {
+  animation: flapFoldUp 0.11s ease-in forwards;
+}
+
+.flap-lower.flap-unfolding {
+  animation: flapUnfold 0.12s ease-out forwards;
+}
+
+@keyframes flapFoldUp {
+  from { transform: perspective(300px) rotateX(0deg); }
+  to   { transform: perspective(300px) rotateX(-88deg); }
+}
+
+@keyframes flapUnfold {
+  from { transform: perspective(300px) rotateX(88deg); }
+  to   { transform: perspective(300px) rotateX(0deg); }
 }
 
 .hero-sel {
@@ -2497,6 +2551,16 @@ body.site-dark .site-mode-slider { left: 50%; }
   color: var(--color-text);
   border-color: var(--color-text);
   font-weight: 500;
+}
+
+.hero-sel--overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
 }
 
 .hero-cta-btn {
