@@ -2478,55 +2478,64 @@ body.site-dark .site-mode-slider { left: 50%; }
 
 /* ── Split-flap display ───────────────────────────────── */
 .hero-flap {
-  display: inline-block;
+  display: inline-flex;
+  align-items: stretch;
   background: var(--color-bg);
   border: 1.5px solid var(--color-text);
   border-radius: 8px;
-  padding: 8px 32px 8px 12px;
+  padding: 7px 32px 7px 12px;
   font-size: 14px;
   font-weight: 500;
-  font-family: inherit;
+  font-family: 'Menlo', 'Courier New', monospace;
   color: var(--color-text);
   min-width: 200px;
+  min-height: 34px;
   cursor: pointer;
   user-select: none;
   vertical-align: middle;
+  letter-spacing: 0.01em;
 }
 
-.flap-upper,
-.flap-lower {
+.flap-tile {
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.flap-tile .flap-upper,
+.flap-tile .flap-lower {
   display: block;
   height: 0.6em;
   overflow: hidden;
   line-height: 1.2;
+  white-space: pre;
 }
 
-.flap-upper {
+.flap-tile .flap-upper {
   transform-origin: bottom center;
-  border-bottom: 1px solid rgba(0,0,0,.06);
+  border-bottom: 0.5px solid rgba(0,0,0,.1);
 }
 
-.flap-lower .flap-text {
+.flap-tile .flap-lower .flap-char {
   display: block;
   margin-top: -0.6em;
 }
 
-.flap-upper.flap-folding {
-  animation: flapFoldUp 0.11s ease-in forwards;
+.flap-tile .flap-upper.flap-folding {
+  animation: flapFoldUp 0.09s ease-in forwards;
 }
 
-.flap-lower.flap-unfolding {
-  animation: flapUnfold 0.12s ease-out forwards;
+.flap-tile .flap-lower.flap-unfolding {
+  animation: flapUnfold 0.1s ease-out forwards;
 }
 
 @keyframes flapFoldUp {
-  from { transform: perspective(300px) rotateX(0deg); }
-  to   { transform: perspective(300px) rotateX(-88deg); }
+  from { transform: perspective(200px) rotateX(0deg); }
+  to   { transform: perspective(200px) rotateX(-88deg); }
 }
 
 @keyframes flapUnfold {
-  from { transform: perspective(300px) rotateX(88deg); }
-  to   { transform: perspective(300px) rotateX(0deg); }
+  from { transform: perspective(200px) rotateX(88deg); }
+  to   { transform: perspective(200px) rotateX(0deg); }
 }
 
 .hero-sel {

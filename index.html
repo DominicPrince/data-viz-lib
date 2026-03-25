@@ -25,10 +25,7 @@
       <div class="hero-sentence-row">
         <span class="hero-sentence-text">My data shows</span>
         <div class="hero-sel-wrap">
-          <div class="hero-flap" id="hero-flap-data">
-            <div class="flap-upper"><span class="flap-text">values over time</span></div>
-            <div class="flap-lower"><span class="flap-text">values over time</span></div>
-          </div>
+          <div class="hero-flap" id="hero-flap-data"></div>
           <select id="hero-rec-data" class="hero-sel hero-sel--overlay">
             <option value="">data structure</option>
             <option value="single">a single number</option>
@@ -45,10 +42,7 @@
         </div>
         <span class="hero-sentence-text">and I want to</span>
         <div class="hero-sel-wrap">
-          <div class="hero-flap" id="hero-flap-goal">
-            <div class="flap-upper"><span class="flap-text">show change over time</span></div>
-            <div class="flap-lower"><span class="flap-text">show change over time</span></div>
-          </div>
+          <div class="hero-flap" id="hero-flap-goal"></div>
           <select id="hero-rec-goal" class="hero-sel hero-sel--overlay">
             <option value="">show goal</option>
             <option value="compare">compare values</option>
@@ -295,30 +289,57 @@
         return val;
       }
 
+      function makeTile(ch) {
+        var c = ch === ' ' ? '\u00A0' : ch;
+        var tile = document.createElement('span');
+        tile.className = 'flap-tile';
+        tile.innerHTML =
+          '<span class="flap-upper"><span class="flap-char">' + c + '</span></span>' +
+          '<span class="flap-lower"><span class="flap-char">' + c + '</span></span>';
+        return tile;
+      }
+
+      function buildFlap(flapEl, text) {
+        flapEl.innerHTML = '';
+        for (var i = 0; i < text.length; i++) flapEl.appendChild(makeTile(text[i]));
+      }
+
       function flapTo(flapEl, newText, animate) {
         if (!flapEl) return;
-        var upper     = flapEl.querySelector('.flap-upper');
-        var lower     = flapEl.querySelector('.flap-lower');
-        var upperText = upper.querySelector('.flap-text');
-        var lowerText = lower.querySelector('.flap-text');
-        if (!animate) {
-          upperText.textContent = newText;
-          lowerText.textContent = newText;
-          return;
+        if (!animate) { buildFlap(flapEl, newText); return; }
+
+        var tiles = Array.from(flapEl.querySelectorAll('.flap-tile'));
+
+        // Reconcile tile count
+        while (tiles.length < newText.length) {
+          var t = makeTile(' '); flapEl.appendChild(t); tiles.push(t);
         }
-        upper.classList.remove('flap-folding');
-        lower.classList.remove('flap-unfolding');
-        void upper.offsetWidth; // force reflow to restart animation
-        upper.classList.add('flap-folding');
-        setTimeout(function() {
-          upperText.textContent = newText;
-          lowerText.textContent = newText;
-          upper.classList.remove('flap-folding');
-          lower.classList.add('flap-unfolding');
+        while (tiles.length > newText.length) flapEl.removeChild(tiles.pop());
+
+        var STAGGER = 28, FOLD = 90;
+
+        tiles.forEach(function(tile, i) {
+          var newCh = newText[i] === ' ' ? '\u00A0' : newText[i];
+          var upper = tile.querySelector('.flap-upper');
+          var lower = tile.querySelector('.flap-lower');
+          var uc    = upper.querySelector('.flap-char');
+          var lc    = lower.querySelector('.flap-char');
+          if (uc.textContent === newCh) return;
+
           setTimeout(function() {
+            upper.classList.remove('flap-folding');
             lower.classList.remove('flap-unfolding');
-          }, 120);
-        }, 110);
+            void upper.offsetWidth;
+            upper.classList.add('flap-folding');
+            setTimeout(function() {
+              uc.textContent = newCh;
+              lc.textContent = newCh;
+              upper.classList.remove('flap-folding');
+              lower.classList.add('flap-unfolding');
+              setTimeout(function() { lower.classList.remove('flap-unfolding'); }, 100);
+            }, FOLD);
+          }, i * STAGGER);
+        });
       }
 
       function applyCombo(combo, animate) {
