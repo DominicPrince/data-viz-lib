@@ -306,19 +306,33 @@
 
       function flapTo(flapEl, newText, animate, startDelay) {
         if (!flapEl) return 0;
-        if (!animate) { buildFlap(flapEl, newText); return 0; }
+
+        var tiles = Array.from(flapEl.querySelectorAll('.flap-tile'));
+
+        // Add tiles if new text is longer than current tile count
+        while (tiles.length < newText.length) {
+          var t = makeTile(' '); flapEl.appendChild(t); tiles.push(t);
+        }
+
+        // Pad target with spaces to fill all tiles — never remove tiles mid-animation
+        var target = newText;
+        while (target.length < tiles.length) target += ' ';
+
+        if (!animate) {
+          // Instant update in place
+          tiles.forEach(function(tile, i) {
+            var c = target[i] === ' ' ? '\u00A0' : target[i];
+            tile.querySelector('.flap-upper .flap-char').textContent = c;
+            tile.querySelector('.flap-lower .flap-char').textContent = c;
+          });
+          return 0;
+        }
 
         startDelay = startDelay || 0;
         var STAGGER = 28, FOLD = 90, UNFOLD = 100;
 
-        var tiles = Array.from(flapEl.querySelectorAll('.flap-tile'));
-        while (tiles.length < newText.length) {
-          var t = makeTile(' '); flapEl.appendChild(t); tiles.push(t);
-        }
-        while (tiles.length > newText.length) flapEl.removeChild(tiles.pop());
-
         tiles.forEach(function(tile, i) {
-          var newCh = newText[i] === ' ' ? '\u00A0' : newText[i];
+          var newCh = target[i] === ' ' ? '\u00A0' : target[i];
           var upper = tile.querySelector('.flap-upper');
           var lower = tile.querySelector('.flap-lower');
           var uc    = upper.querySelector('.flap-char');
@@ -340,7 +354,6 @@
           }, startDelay + i * STAGGER);
         });
 
-        // Return the ms at which the last tile finishes
         return startDelay + (tiles.length - 1) * STAGGER + FOLD + UNFOLD;
       }
 
