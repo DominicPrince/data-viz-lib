@@ -304,19 +304,18 @@
         for (var i = 0; i < text.length; i++) flapEl.appendChild(makeTile(text[i]));
       }
 
-      function flapTo(flapEl, newText, animate) {
-        if (!flapEl) return;
-        if (!animate) { buildFlap(flapEl, newText); return; }
+      function flapTo(flapEl, newText, animate, startDelay) {
+        if (!flapEl) return 0;
+        if (!animate) { buildFlap(flapEl, newText); return 0; }
+
+        startDelay = startDelay || 0;
+        var STAGGER = 28, FOLD = 90, UNFOLD = 100;
 
         var tiles = Array.from(flapEl.querySelectorAll('.flap-tile'));
-
-        // Reconcile tile count
         while (tiles.length < newText.length) {
           var t = makeTile(' '); flapEl.appendChild(t); tiles.push(t);
         }
         while (tiles.length > newText.length) flapEl.removeChild(tiles.pop());
-
-        var STAGGER = 28, FOLD = 90;
 
         tiles.forEach(function(tile, i) {
           var newCh = newText[i] === ' ' ? '\u00A0' : newText[i];
@@ -336,17 +335,20 @@
               lc.textContent = newCh;
               upper.classList.remove('flap-folding');
               lower.classList.add('flap-unfolding');
-              setTimeout(function() { lower.classList.remove('flap-unfolding'); }, 100);
+              setTimeout(function() { lower.classList.remove('flap-unfolding'); }, UNFOLD);
             }, FOLD);
-          }, i * STAGGER);
+          }, startDelay + i * STAGGER);
         });
+
+        // Return the ms at which the last tile finishes
+        return startDelay + (tiles.length - 1) * STAGGER + FOLD + UNFOLD;
       }
 
       function applyCombo(combo, animate) {
         dataEl.value = combo[0];
         goalEl.value = combo[1];
-        flapTo(flapData, getOptionText(dataEl, combo[0]), animate);
-        flapTo(flapGoal, getOptionText(goalEl, combo[1]), animate);
+        var dataEnd = flapTo(flapData, getOptionText(dataEl, combo[0]), animate, 0);
+        flapTo(flapGoal, getOptionText(goalEl, combo[1]), animate, animate ? dataEnd : 0);
       }
 
       // Lock each flap to the width of its longest option so layout never shifts
