@@ -169,6 +169,14 @@
           <button class="export-btn" id="b-dl-png">Download PNG</button>
           <button class="export-btn" id="b-copy-embed">Copy Embed</button>
         </div>
+        <div class="png-res-row">
+          <span class="png-res-label">PNG size</span>
+          <div class="png-res-btns">
+            <button class="png-res-btn" data-scale="1">S</button>
+            <button class="png-res-btn active" data-scale="2">M</button>
+            <button class="png-res-btn" data-scale="4">L</button>
+          </div>
+        </div>
         <label class="b-interactive-label">
           <input type="checkbox" id="b-interactive"> Interactive embed
         </label>
@@ -2057,6 +2065,15 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
 
+  let pngScale = 2;
+  document.querySelectorAll('.png-res-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.png-res-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      pngScale = parseInt(btn.dataset.scale);
+    });
+  });
+
   document.getElementById('b-dl-png').addEventListener('click', () => {
     const blob = new Blob([currentSVG], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
@@ -2065,10 +2082,9 @@
       const m = currentSVG.match(/viewBox="0 0 (\d+) (\d+)"/);
       const w = m ? parseInt(m[1]) : 560;
       const h = m ? parseInt(m[2]) : 300;
-      const scale = 2;
       const canvas = document.createElement('canvas');
-      canvas.width = w * scale;
-      canvas.height = h * scale;
+      canvas.width = w * pngScale;
+      canvas.height = h * pngScale;
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
       const a = document.createElement('a');
       a.href = canvas.toDataURL('image/png');

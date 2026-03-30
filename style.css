@@ -1318,6 +1318,42 @@ body.site-dark .site-mode-slider { left: 50%; }
 }
 .export-btn:hover { background: var(--color-border); }
 
+.png-res-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+.png-res-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+.png-res-btns {
+  display: flex;
+  border: 1.5px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.png-res-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  border: none;
+  border-left: 1.5px solid var(--color-border);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.png-res-btn:first-child { border-left: none; }
+.png-res-btn:hover { background: var(--color-border); color: var(--color-text); }
+.png-res-btn.active {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
 .builder-preview {
   flex: 1;
   display: flex;
