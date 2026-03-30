@@ -38,6 +38,8 @@ const state = {
   vegaViews: {}, // card id → vega view, for re-theming
   savedPalettes: JSON.parse(sessionStorage.getItem('savedPalettes') || '[]'),
   chartStyle: 'journeys',
+  viewMode: 'grid',   // 'grid' | 'list'
+  sortOrder: 'az',    // 'az' | 'za'
 };
 
 /* ── Theme presets ───────────────────────────────────────────────────────── */
@@ -1298,10 +1300,12 @@ function runSearch() {
   renderGrid(results, { recommended: !!(state.dataStructure && state.goal) });
 }
 
-/* ── Grid rendering ──────────────────────────────────────────────────────── */
+/* ── Grid/List rendering ─────────────────────────────────────────────────── */
 function renderGrid(items, { recommended = false } = {}) {
   state.vegaViews = {};
   vizGrid.innerHTML = '';
+
+  const resultsCount = document.getElementById('results-count');
 
   if (!items.length) {
     const msg = recommended
@@ -1313,37 +1317,97 @@ function renderGrid(items, { recommended = false } = {}) {
         <strong>${msg}</strong>
         ${sub}
       </div>`;
-    resultsMeta.textContent = '';
+    resultsCount.textContent = '';
     return;
   }
 
-  resultsMeta.textContent = `${items.length} chart${items.length !== 1 ? 's' : ''}`;
+  resultsCount.textContent = `${items.length} chart${items.length !== 1 ? 's' : ''}`;
 
-  items.forEach(viz => {
-    const card = document.createElement('div');
-    card.className = 'viz-card';
-    card.dataset.vizId = viz.id;
-
-    const tagPills = viz.tags.slice(0,3).map(t =>
-      `<span class="tag-pill">${capitalize(t)}</span>`
-    ).join('');
-
-    card.innerHTML = `
-      ${viz.builderReady ? '<div class="build-badge">Build</div>' : ''}
-      <div class="viz-card-preview" id="preview-${viz.id}"></div>
-      <div class="viz-card-body">
-        <div class="viz-card-name">${viz.name}</div>
-        <div class="viz-card-desc">${viz.description}</div>
-        <div class="viz-card-tags">${tagPills}</div>
-      </div>
-    `;
-
-    card.addEventListener('click', () => openModal(viz.id));
-    vizGrid.appendChild(card);
-
-    renderCardChart(viz.id);
+  const sorted = [...items].sort((a, b) => {
+    const cmp = a.name.localeCompare(b.name);
+    return state.sortOrder === 'za' ? -cmp : cmp;
   });
+
+  vizGrid.className = state.viewMode === 'list' ? 'viz-list' : 'viz-grid';
+
+  if (state.viewMode === 'list') {
+    sorted.forEach(viz => {
+      const row = document.createElement('div');
+      row.className = 'viz-row';
+      row.dataset.vizId = viz.id;
+
+      const tagPills = viz.tags.slice(0, 3).map(t =>
+        `<span class="tag-pill">${capitalize(t)}</span>`
+      ).join('');
+
+      row.innerHTML = `
+        <div class="viz-row-preview" id="preview-${viz.id}"></div>
+        <div class="viz-row-info">
+          <div class="viz-row-name">
+            ${viz.name}
+            ${viz.builderReady ? '<span class="build-badge" style="position:static;margin-left:8px;">Build</span>' : ''}
+          </div>
+          <div class="viz-row-desc">${viz.description}</div>
+          <div class="viz-row-tags">${tagPills}</div>
+        </div>
+      `;
+
+      row.addEventListener('click', () => openModal(viz.id));
+      vizGrid.appendChild(row);
+      renderCardChart(viz.id);
+    });
+  } else {
+    sorted.forEach(viz => {
+      const card = document.createElement('div');
+      card.className = 'viz-card';
+      card.dataset.vizId = viz.id;
+
+      const tagPills = viz.tags.slice(0, 3).map(t =>
+        `<span class="tag-pill">${capitalize(t)}</span>`
+      ).join('');
+
+      card.innerHTML = `
+        ${viz.builderReady ? '<div class="build-badge">Build</div>' : ''}
+        <div class="viz-card-preview" id="preview-${viz.id}"></div>
+        <div class="viz-card-body">
+          <div class="viz-card-name">${viz.name}</div>
+          <div class="viz-card-desc">${viz.description}</div>
+          <div class="viz-card-tags">${tagPills}</div>
+        </div>
+      `;
+
+      card.addEventListener('click', () => openModal(viz.id));
+      vizGrid.appendChild(card);
+      renderCardChart(viz.id);
+    });
+  }
 }
+
+/* ── Sort & view toggle handlers ─────────────────────────────────────────── */
+document.getElementById('sort-az').addEventListener('click', () => {
+  state.sortOrder = 'az';
+  document.getElementById('sort-az').classList.add('active');
+  document.getElementById('sort-za').classList.remove('active');
+  runSearch();
+});
+document.getElementById('sort-za').addEventListener('click', () => {
+  state.sortOrder = 'za';
+  document.getElementById('sort-za').classList.add('active');
+  document.getElementById('sort-az').classList.remove('active');
+  runSearch();
+});
+document.getElementById('view-grid').addEventListener('click', () => {
+  state.viewMode = 'grid';
+  document.getElementById('view-grid').classList.add('active');
+  document.getElementById('view-list').classList.remove('active');
+  runSearch();
+});
+document.getElementById('view-list').addEventListener('click', () => {
+  state.viewMode = 'list';
+  document.getElementById('view-list').classList.add('active');
+  document.getElementById('view-grid').classList.remove('active');
+  runSearch();
+});
 
 function renderCardChart(vizId) {
   const container = document.getElementById(`preview-${vizId}`);

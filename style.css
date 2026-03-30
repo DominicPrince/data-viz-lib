@@ -609,10 +609,13 @@ body.site-dark .site-mode-slider { left: 50%; }
 
 /* ── Results meta ─────────────────────────────────────────── */
 .results-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 12px;
   color: var(--color-subtle);
   margin-bottom: 16px;
-  height: 16px;
+  min-height: 28px;
 }
 
 /* ── Viz grid ─────────────────────────────────────────────── */
@@ -713,6 +716,119 @@ body.site-dark .site-mode-slider { left: 50%; }
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+/* ── List view ────────────────────────────────────────────── */
+.viz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.viz-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: box-shadow var(--transition), border-color var(--transition);
+}
+.viz-row:hover {
+  box-shadow: var(--shadow-card);
+  border-color: color-mix(in srgb, var(--color-border) 50%, var(--color-accent));
+}
+
+.viz-row-preview {
+  flex-shrink: 0;
+  width: 120px;
+  height: 80px;
+  background: var(--color-bg);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.viz-row-preview > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.viz-row-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.viz-row-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.viz-row-desc {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.viz-row-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* ── Sort & view toggle buttons ───────────────────────────── */
+
+.catalog-meta-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sort-btns,
+.view-btns {
+  display: flex;
+  border: 1.5px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.sort-btn,
+.view-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-left: 1.5px solid var(--color-border);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.view-btn { padding: 5px 8px; }
+.sort-btn:first-child,
+.view-btn:first-child { border-left: none; }
+.sort-btn:hover,
+.view-btn:hover { background: var(--color-border); color: var(--color-text); }
+.sort-btn.active,
+.view-btn.active {
+  background: var(--color-text);
+  color: var(--color-bg);
 }
 
 .tag-pill {
