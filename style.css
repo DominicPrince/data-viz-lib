@@ -2813,3 +2813,19 @@ body.site-dark .site-mode-slider { left: 50%; }
   font-family: inherit;
 }
 .sidebar-signout-btn:hover { color: var(--color-text); }
+
+/* ── Mobile layout ────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .main {
+    padding: 32px 16px 60px;
+  }
+
+  .catalog-toolbar {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .catalog-controls {
+    align-self: flex-start;
+  }
+}
