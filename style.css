@@ -2822,6 +2822,7 @@ body.site-dark .site-mode-slider { left: 50%; }
 
   .catalog-toolbar {
     flex-direction: column;
+    align-items: stretch;
     gap: 12px;
   }
 
